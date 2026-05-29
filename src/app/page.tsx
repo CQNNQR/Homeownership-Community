@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 
 export default function Home() {
@@ -24,14 +25,14 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            <div className="flex items-center gap-1">
+            <Link href="/" className="flex items-center gap-1">
               <span className="text-xl font-bold text-black tracking-tight">THE HOME</span>
               <span className="text-xl font-bold text-gray-500 tracking-tight">OWNERSHIP COMMUNITY</span>
-            </div>
+            </Link>
             <div className="hidden md:flex items-center gap-8">
-              <a href="#blog" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Blog</a>
-              <a href="#resources" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Resources</a>
-              <a href="#books" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Books</a>
+              <Link href="/blog" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Blog</Link>
+              <Link href="/resources" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Resources</Link>
+              <Link href="/books" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Books</Link>
               <button
                 onClick={() => setShowModal(true)}
                 className="bg-red-700 hover:bg-red-800 text-white font-semibold px-6 py-3 rounded text-sm transition-colors"
@@ -75,7 +76,7 @@ export default function Home() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="#blog"
+              href="/blog"
               className="bg-red-700 hover:bg-red-800 text-white font-semibold px-8 py-4 rounded text-base transition-colors inline-flex items-center justify-center gap-2"
             >
               Read Our Blog
@@ -84,7 +85,7 @@ export default function Home() {
               </svg>
             </a>
             <a
-              href="#books"
+              href="/books"
               className="bg-black/80 hover:bg-black text-white font-semibold px-8 py-4 rounded text-base transition-colors border border-white/30 inline-flex items-center justify-center gap-2"
             >
               Get My Book
@@ -105,7 +106,7 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Card 1 */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+            <Link href="/blog/how-to-spot-value-in-high-end-real-estate" className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block">
               <div className="h-56 bg-gray-200 relative">
                 <img
                   src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&auto=format&fit=crop"
@@ -122,17 +123,17 @@ export default function Home() {
                 <p className="text-gray-600 text-sm mb-4 leading-relaxed">
                   Learn the key indicators that separate great investments from overpriced properties in luxury markets.
                 </p>
-                <a href="#" className="text-red-700 font-semibold text-sm inline-flex items-center gap-1 hover:gap-2 transition-all">
+                <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
                   Read Article
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
-                </a>
+                </span>
               </div>
-            </div>
+            </Link>
 
             {/* Card 2 */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+            <Link href="/blog/why-joining-real-estate-community-accelerates-success" className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block">
               <div className="h-56 bg-gray-100 flex items-center justify-center">
                 <div className="bg-gray-200 border-2 border-dashed border-gray-300 w-full h-full flex items-center justify-center">
                   <span className="text-gray-400 text-sm font-medium">Community Logo</span>
@@ -147,17 +148,17 @@ export default function Home() {
                 <p className="text-gray-600 text-sm mb-4 leading-relaxed">
                   Discover how networking with fellow investors can unlock opportunities you won&apos;t find alone.
                 </p>
-                <a href="#" className="text-red-700 font-semibold text-sm inline-flex items-center gap-1 hover:gap-2 transition-all">
+                <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
                   Read Article
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
-                </a>
+                </span>
               </div>
-            </div>
+            </Link>
 
             {/* Card 3 */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+            <Link href="/blog/managing-high-end-properties-landlords-guide" className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block">
               <div className="h-56 bg-gray-200 relative">
                 <img
                   src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop"
@@ -174,24 +175,24 @@ export default function Home() {
                 <p className="text-gray-600 text-sm mb-4 leading-relaxed">
                   Essential strategies for maintaining luxury rentals and keeping tenants satisfied long-term.
                 </p>
-                <a href="#" className="text-red-700 font-semibold text-sm inline-flex items-center gap-1 hover:gap-2 transition-all">
+                <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
                   Read Article
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
-                </a>
+                </span>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* View All Posts Button */}
           <div className="text-center mt-12">
-            <a
-              href="#"
+            <Link
+              href="/blog"
               className="inline-flex items-center justify-center px-8 py-4 border-2 border-black text-black font-semibold rounded hover:bg-black hover:text-white transition-colors"
             >
               View All Posts
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -212,7 +213,7 @@ export default function Home() {
           {/* Book List */}
           <div className="space-y-6">
             {/* Book 1 */}
-            <a href="#" className="flex items-center gap-6 p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow group">
+            <Link href="/books" className="flex items-center gap-6 p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow group">
               <div className="bg-pink-200 w-16 h-16 rounded flex items-center justify-center flex-shrink-0">
                 <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -225,10 +226,10 @@ export default function Home() {
               <svg className="w-5 h-5 text-gray-400 group-hover:text-red-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
-            </a>
+            </Link>
 
             {/* Book 2 */}
-            <a href="#" className="flex items-center gap-6 p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow group">
+            <Link href="/books" className="flex items-center gap-6 p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow group">
               <div className="bg-pink-200 w-16 h-16 rounded flex items-center justify-center flex-shrink-0">
                 <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -241,25 +242,25 @@ export default function Home() {
               <svg className="w-5 h-5 text-gray-400 group-hover:text-red-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
-            </a>
+            </Link>
           </div>
 
           {/* Other Resources */}
           <div className="mt-12 pt-8 border-t border-gray-200">
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Other Resources & Sites</p>
             <div className="space-y-3">
-              <a href="#" className="flex items-center gap-2 text-black font-medium hover:text-red-700 transition-colors">
+              <Link href="/resources" className="flex items-center gap-2 text-black font-medium hover:text-red-700 transition-colors">
                 Real Estate Investor Portal
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-              </a>
-              <a href="#" className="flex items-center gap-2 text-black font-medium hover:text-red-700 transition-colors">
+              </Link>
+              <Link href="/resources" className="flex items-center gap-2 text-black font-medium hover:text-red-700 transition-colors">
                 Property Management Tools
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -280,10 +281,10 @@ export default function Home() {
       <footer className="py-16 bg-[#F9F9F9] border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Logo */}
-          <div className="flex items-center justify-center gap-1 mb-8">
+          <Link href="/" className="flex items-center justify-center gap-1 mb-8">
             <span className="text-xl font-bold text-black tracking-tight">THE HOME</span>
             <span className="text-xl font-bold text-gray-400 tracking-tight">OWNERSHIP COMMUNITY</span>
-          </div>
+          </Link>
 
           {/* Mission Statement */}
           <p className="text-center text-gray-500 mb-8 max-w-md mx-auto">
