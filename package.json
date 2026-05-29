@@ -20,7 +20,6 @@
   },
   "homepage": "https://github.com/CQNNQR/Homeownership-Community#readme",
   "dependencies": {
-    "graphql-request": "^7.4.0",
     "next": "^16.2.6",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"

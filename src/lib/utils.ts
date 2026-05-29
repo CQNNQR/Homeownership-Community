@@ -1,4 +1,4 @@
-import { WPPost } from './wordpress';
+import { WPRestPost } from './wordpress';
 
 export function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -26,23 +26,28 @@ export function getReadingTime(content: string): string {
   return `${minutes} min read`;
 }
 
-export function getCategoryName(categories: { nodes: { name: string }[] }): string {
-  return categories?.nodes?.[0]?.name || 'General';
+export function getCategoryName(categories: number[], embedded?: WPRestPost['_embedded']): string {
+  if (embedded?.['wp:term']?.[0]?.[0]?.name) {
+    return embedded['wp:term'][0][0].name;
+  }
+  return 'General';
 }
 
-export function normalizePost(post: WPPost) {
+export function normalizePost(post: WPRestPost) {
+  const featuredImage = post._embedded?.['wp:featuredmedia']?.[0];
+
   return {
-    id: post.id,
+    id: String(post.id),
     slug: post.slug,
-    title: post.title.replace(/<[^>]*>/g, ''),
-    excerpt: truncateExcerpt(post.excerpt),
-    content: post.content,
+    title: stripHtml(post.title.rendered),
+    excerpt: truncateExcerpt(post.excerpt.rendered),
+    content: post.content?.rendered || '',
     date: formatDate(post.date),
     modified: formatDate(post.modified),
-    image: post.featuredImage?.node?.sourceUrl || null,
-    imageAlt: post.featuredImage?.node?.altText || post.title,
-    category: getCategoryName(post.categories),
-    author: post.author?.node?.name || 'The Home Ownership Community',
-    readingTime: post.content ? getReadingTime(post.content) : '5 min read',
+    image: featuredImage?.source_url || null,
+    imageAlt: featuredImage?.alt_text || stripHtml(post.title.rendered),
+    category: getCategoryName(post.categories, post._embedded),
+    author: post._embedded?.author?.[0]?.name || 'The Home Ownership Community',
+    readingTime: post.content?.rendered ? getReadingTime(post.content.rendered) : '5 min read',
   };
 }

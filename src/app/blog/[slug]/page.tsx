@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { wpClient, GET_POST_BY_SLUG, GET_POSTS, WPPost } from '@/lib/wordpress'
+import { getPostBySlug, getPosts } from '@/lib/wordpress'
 import { normalizePost, formatDate } from '@/lib/utils'
 
 interface Props {
@@ -12,8 +12,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   try {
-    const data: any = await wpClient.request(GET_POST_BY_SLUG, { slug })
-    const post = data.post
+    const post = await getPostBySlug(slug)
 
     if (!post) {
       return { title: 'Post Not Found' }
@@ -42,16 +41,13 @@ export default async function BlogPostPage({ params }: Props) {
   let relatedPosts: any[] = []
 
   try {
-    const data: any = await wpClient.request(GET_POST_BY_SLUG, { slug })
-    post = data.post
+    post = await getPostBySlug(slug)
 
     if (post) {
-      const normalizedPost = normalizePost(post)
-
-      // Fetch related posts (same category, excluding current)
-      const relatedData: any = await wpClient.request(GET_POSTS, { first: 4 })
-      relatedPosts = relatedData.posts.nodes
-        .filter((p: WPPost) => p.slug !== slug)
+      // Fetch related posts (latest posts, excluding current)
+      const { posts: allPosts } = await getPosts(1, 4)
+      relatedPosts = allPosts
+        .filter((p) => p.slug !== slug)
         .slice(0, 3)
         .map(normalizePost)
     }
@@ -112,7 +108,7 @@ export default async function BlogPostPage({ params }: Props) {
       {/* Article Content */}
       <section className="py-16 bg-white">
         <article className="max-w-3xl mx-auto px-4 prose prose-lg max-w-none">
-          <div dangerouslySetInnerHTML={{ __html: post.content }} />
+          <div dangerouslySetInnerHTML={{ __html: post.content?.rendered || '' }} />
         </article>
       </section>
 

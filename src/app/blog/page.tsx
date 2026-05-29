@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { wpClient, GET_POSTS, WPPost, WPPageInfo } from '@/lib/wordpress'
+import { getPosts, WPRestPageInfo } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
 interface Post {
@@ -21,7 +21,7 @@ interface Post {
 
 export default function BlogPage() {
   const [posts, setPosts] = useState<Post[]>([])
-  const [pageInfo, setPageInfo] = useState<WPPageInfo | null>(null)
+  const [pageInfo, setPageInfo] = useState<WPRestPageInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,38 +31,28 @@ export default function BlogPage() {
 
   useEffect(() => {
     cancelledRef.current = false
-    fetchPosts()
+    fetchPosts(1)
 
     return () => {
       cancelledRef.current = true
     }
   }, [])
 
-  async function fetchPosts(cursor?: string) {
+  async function fetchPosts(page: number) {
     if (cancelledRef.current) return
 
     try {
-      const variables = {
-        first: POSTS_PER_PAGE,
-        after: cursor || null,
-      }
-
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-      const data: any = await wpClient.request(GET_POSTS, variables)
-      clearTimeout(timeoutId)
+      const { posts: newPosts, pageInfo: newPageInfo } = await getPosts(page, POSTS_PER_PAGE)
 
       if (cancelledRef.current) return
 
-      const postsData = data.posts.nodes.map(normalizePost)
-      const newPageInfo = data.posts.pageInfo
+      const normalizedPosts = newPosts.map(normalizePost)
 
-      if (cursor) {
-        setPosts(prev => [...prev, ...postsData])
+      if (page > 1) {
+        setPosts(prev => [...prev, ...normalizedPosts])
         setLoadingMore(false)
       } else {
-        setPosts(postsData)
+        setPosts(normalizedPosts)
       }
       setPageInfo(newPageInfo)
       setLoading(false)
@@ -74,9 +64,9 @@ export default function BlogPage() {
   }
 
   async function loadMore() {
-    if (!pageInfo?.hasNextPage || loadingMore) return
+    if (!pageInfo || pageInfo.currentPage >= pageInfo.totalPages || loadingMore) return
     setLoadingMore(true)
-    await fetchPosts(pageInfo.endCursor)
+    await fetchPosts(pageInfo.currentPage + 1)
   }
 
   return (
@@ -114,7 +104,7 @@ export default function BlogPage() {
             <div className="text-center py-16">
               <p className="text-gray-600 mb-4">{error}</p>
               <button
-                onClick={() => fetchPosts()}
+                onClick={() => fetchPosts(1)}
                 className="text-red-700 hover:text-red-800 font-semibold"
               >
                 Try Again
@@ -167,7 +157,7 @@ export default function BlogPage() {
               </div>
 
               {/* Load More Button */}
-              {pageInfo?.hasNextPage && (
+              {pageInfo && pageInfo.currentPage < pageInfo.totalPages && (
                 <div className="text-center mt-12">
                   <button
                     onClick={loadMore}

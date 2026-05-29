@@ -1,17 +1,12 @@
 import Link from 'next/link'
-import { wpClient, GET_POSTS, WPPost } from '@/lib/wordpress'
+import { getPosts } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
 async function getLatestPosts() {
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
-
-    const data: any = await wpClient.request(GET_POSTS, { first: 3 })
-    clearTimeout(timeoutId)
-    return data.posts.nodes.map(normalizePost)
+    const { posts } = await getPosts(1, 3)
+    return posts.map(normalizePost)
   } catch (err) {
-    // Silently handle errors to prevent console spam
     return []
   }
 }
