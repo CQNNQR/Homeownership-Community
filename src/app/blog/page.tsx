@@ -1,65 +1,69 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import Link from 'next/link'
+import { wpClient, GET_POSTS, WPPost, WPPageInfo } from '@/lib/wordpress'
+import { normalizePost } from '@/lib/utils'
 
-const blogPosts = [
-  {
-    slug: 'how-to-spot-value-in-high-end-real-estate',
-    title: 'How to Spot Value in High-End Real Estate',
-    excerpt: 'Learn the key indicators that separate great investments from overpriced properties in luxury markets.',
-    category: 'Investment Properties',
-    date: 'October 12, 2024',
-    image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&auto=format&fit=crop',
-    readTime: '8 min read',
-  },
-  {
-    slug: 'why-joining-real-estate-community-accelerates-success',
-    title: 'Why Joining a Real Estate Community Accelerates Your Success',
-    excerpt: 'Discover how networking with fellow investors can unlock opportunities you won\'t find alone.',
-    category: 'Real Estate Community',
-    date: 'October 8, 2024',
-    image: null,
-    readTime: '6 min read',
-  },
-  {
-    slug: 'managing-high-end-properties-landlords-guide',
-    title: 'Managing High-End Properties: A Landlord\'s Guide',
-    excerpt: 'Essential strategies for maintaining luxury rentals and keeping tenants satisfied long-term.',
-    category: 'Future Landlord',
-    date: 'October 14, 2024',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop',
-    readTime: '10 min read',
-  },
-  {
-    slug: 'financing-your-first-investment-property',
-    title: 'Financing Your First Investment Property',
-    excerpt: 'Understanding loan options, down payments, and financing strategies for new investors.',
-    category: 'Mortgage Education',
-    date: 'October 20, 2024',
-    image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&auto=format&fit=crop',
-    readTime: '12 min read',
-  },
-  {
-    slug: 'building-generational-wealth-through-real-estate',
-    title: 'Building Generational Wealth Through Real Estate',
-    excerpt: 'How strategic property investments can create lasting wealth for your family.',
-    category: 'Building Generational Wealth',
-    date: 'October 25, 2024',
-    image: 'https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?w=800&auto=format&fit=crop',
-    readTime: '15 min read',
-  },
-  {
-    slug: 'market-analysis-for-real-estate-investors',
-    title: 'Market Analysis for Real Estate Investors',
-    excerpt: 'How to evaluate local markets, trends, and opportunities before making investment decisions.',
-    category: 'Real Estate Investing',
-    date: 'November 1, 2024',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop',
-    readTime: '11 min read',
-  },
-]
+interface Post {
+  id: string
+  slug: string
+  title: string
+  excerpt: string
+  date: string
+  image: string | null
+  imageAlt: string
+  category: string
+  readingTime: string
+}
 
 export default function BlogPage() {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [pageInfo, setPageInfo] = useState<WPPageInfo | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const POSTS_PER_PAGE = 6
+
+  useEffect(() => {
+    fetchPosts()
+  }, [])
+
+  async function fetchPosts(cursor?: string) {
+    try {
+      const variables = {
+        first: POSTS_PER_PAGE,
+        after: cursor || null,
+      }
+
+      const data: any = await wpClient.request(GET_POSTS, variables)
+      const postsData = data.posts.nodes.map(normalizePost)
+      const newPageInfo = data.posts.pageInfo
+
+      if (cursor) {
+        setPosts(prev => [...prev, ...postsData])
+        setLoadingMore(false)
+      } else {
+        setPosts(postsData)
+      }
+      setPageInfo(newPageInfo)
+      setLoading(false)
+    } catch (err) {
+      console.error('Error fetching posts:', err)
+      setError('Unable to load blog posts. Please try again later.')
+      setLoading(false)
+    }
+  }
+
+  async function loadMore() {
+    if (!pageInfo?.hasNextPage || loadingMore) return
+    setLoadingMore(true)
+    await fetchPosts(pageInfo.endCursor)
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navigation />
@@ -77,43 +81,98 @@ export default function BlogPage() {
       {/* Blog Grid */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {blogPosts.map((post) => (
-              <Link
-                key={post.slug}
-                href={`/blog/${post.slug}`}
-                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block"
-              >
-                <div className="h-56 bg-gray-200 relative">
-                  {post.image ? (
-                    <img
-                      src={post.image}
-                      alt={post.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <span className="text-gray-400 text-sm font-medium">Community Logo</span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">{post.category}</span>
-                    <span className="text-gray-400 text-sm">{post.date}</span>
+          {loading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
+                  <div className="h-56 bg-gray-200" />
+                  <div className="p-6">
+                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-4" />
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4" />
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2" />
+                    <div className="h-4 bg-gray-200 rounded w-2/3" />
                   </div>
-                  <h3 className="text-xl font-bold text-black mb-3">{post.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed">{post.excerpt}</p>
-                  <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
-                    Read Article
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </span>
                 </div>
-              </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={() => fetchPosts()}
+                className="text-red-700 hover:text-red-800 font-semibold"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-gray-600">No blog posts found.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {posts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/blog/${post.slug}`}
+                    className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block"
+                  >
+                    <div className="h-56 bg-gray-200 relative">
+                      {post.image ? (
+                        <img
+                          src={post.image}
+                          alt={post.imageAlt}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <span className="text-gray-400 text-sm font-medium">Home Ownership Community</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">{post.category}</span>
+                        <span className="text-gray-400 text-sm">{post.date}</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-black mb-3">{post.title}</h3>
+                      <p className="text-gray-600 text-sm mb-4 leading-relaxed">{post.excerpt}</p>
+                      <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
+                        Read Article
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Load More Button */}
+              {pageInfo?.hasNextPage && (
+                <div className="text-center mt-12">
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="inline-flex items-center justify-center px-8 py-4 border-2 border-black text-black font-semibold rounded hover:bg-black hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Loading...
+                      </>
+                    ) : (
+                      'Show More'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </section>
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import BlogPreview from '@/components/BlogPreview'
 
 export default function Home() {
   const [showModal, setShowModal] = useState(false)
@@ -97,108 +98,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Latest from the Blog Section */}
-      <section id="blog" className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-black mb-4">Real Estate Investing & Homeownership Education</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Insights, tips, and strategies for navigating the real estate market, building generational wealth, and developing your ownership mindset.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Card 1 */}
-            <Link href="/blog/how-to-spot-value-in-high-end-real-estate" className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block">
-              <div className="h-56 bg-gray-200 relative">
-                <img
-                  src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&auto=format&fit=crop"
-                  alt="Luxury living room"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">Investing</span>
-                  <span className="text-gray-400 text-sm">October 12, 2024</span>
-                </div>
-                <h3 className="text-xl font-bold text-black mb-3">How to Spot Value in High-End Real Estate</h3>
-                <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                  Learn the key indicators that separate great investments from overpriced properties in luxury markets.
-                </p>
-                <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
-                  Read Article
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </span>
-              </div>
-            </Link>
-
-            {/* Card 2 */}
-            <Link href="/blog/why-joining-real-estate-community-accelerates-success" className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block">
-              <div className="h-56 bg-gray-100 flex items-center justify-center">
-                <div className="bg-gray-200 border-2 border-dashed border-gray-300 w-full h-full flex items-center justify-center">
-                  <span className="text-gray-400 text-sm font-medium">Community Logo</span>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">Community</span>
-                  <span className="text-gray-400 text-sm">Company News</span>
-                </div>
-                <h3 className="text-xl font-bold text-black mb-3">Why Joining a Real Estate Community Accelerates Your Success</h3>
-                <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                  Discover how networking with fellow investors can unlock opportunities you won&apos;t find alone.
-                </p>
-                <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
-                  Read Article
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </span>
-              </div>
-            </Link>
-
-            {/* Card 3 */}
-            <Link href="/blog/managing-high-end-properties-landlords-guide" className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block">
-              <div className="h-56 bg-gray-200 relative">
-                <img
-                  src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop"
-                  alt="Luxury house at sunset"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">Landlord Tips</span>
-                  <span className="text-gray-400 text-sm">October 14, 2024</span>
-                </div>
-                <h3 className="text-xl font-bold text-black mb-3">Managing High-End Properties: A Landlord&apos;s Guide</h3>
-                <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                  Essential strategies for maintaining luxury rentals and keeping tenants satisfied long-term.
-                </p>
-                <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
-                  Read Article
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </span>
-              </div>
-            </Link>
-          </div>
-
-          {/* View All Posts Button */}
-          <div className="text-center mt-12">
-            <Link
-              href="/blog"
-              className="inline-flex items-center justify-center px-8 py-4 border-2 border-black text-black font-semibold rounded hover:bg-black hover:text-white transition-colors"
-            >
-              Explore All Resources
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Latest from the Blog Section - WordPress Powered */}
+      <BlogPreview />
 
       {/* Books Section */}
       <section id="books" className="py-24 bg-[#F9F9F9]">
