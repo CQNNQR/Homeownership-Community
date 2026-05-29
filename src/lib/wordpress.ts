@@ -5,10 +5,27 @@ const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://your-wor
 
 const endpoint = `${WORDPRESS_URL}/graphql`;
 
+// Create a fetch wrapper with timeout
+async function fetchWithTimeout(url: string, options: RequestInit, timeout = 8000) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    return response
+  } catch (error) {
+    clearTimeout(timeoutId)
+    throw error
+  }
+}
+
+// Create a GraphQL client with our custom fetch
 export const wpClient = new GraphQLClient(endpoint, {
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  fetch: (url, options) => fetchWithTimeout(url as string, options as RequestInit),
 });
 
 // GraphQL Queries for WPGraphQL
