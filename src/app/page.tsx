@@ -21,7 +21,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center gap-1">
@@ -52,7 +52,7 @@ export default function Home() {
             backgroundImage: `url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075&auto=format&fit=crop')`,
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1E2A1E]/90 via-[#121A12]/85 to-[#121A12]/95" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/75 to-black/90" />
         </div>
 
         {/* Hero Content */}
@@ -268,27 +268,11 @@ export default function Home() {
       {/* Community Ad Banner */}
       <section className="py-16 bg-gradient-to-b from-pink-50 to-gray-100">
         <div className="max-w-4xl mx-auto px-4">
-          <div className="bg-black rounded-xl overflow-hidden shadow-2xl">
-            <div className="p-12 md:p-16 text-center">
-              {/* House Illustration */}
-              <div className="mb-8">
-                <svg className="w-24 h-24 mx-auto" viewBox="0 0 100 100" fill="none">
-                  <path d="M50 10L10 40V90H40V60H60V90H90V40L50 10Z" fill="#D4AF37" />
-                  <rect x="45" y="65" width="10" height="25" fill="#1E2A1E" />
-                  <rect x="25" y="50" width="15" height="15" fill="#87CEEB" opacity="0.5" />
-                  <rect x="60" y="50" width="15" height="15" fill="#87CEEB" opacity="0.5" />
-                </svg>
-              </div>
-              <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                JOIN THE COMMUNITY!
-              </h3>
-              <p className="text-xl md:text-2xl text-yellow-400 font-semibold mb-6">
-                DO YOU WANT TO BECOME A REAL ESTATE INVESTOR / FUTURE LANDLORD?
-              </p>
-              <p className="text-white/80 text-lg mb-6">STAY INFORMED.</p>
-              <p className="text-white font-medium">WWW.THEHOMEOWNERSHIPCOMMUNITY.COM</p>
-            </div>
-          </div>
+          <img
+            src="/assets/join the community.png"
+            alt="Join the Community"
+            className="w-full rounded-xl shadow-2xl"
+          />
         </div>
       </section>
 
