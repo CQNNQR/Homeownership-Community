@@ -126,9 +126,11 @@ export default function BlogPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <span className="text-gray-400 text-sm font-medium">Home Ownership Community</span>
-                        </div>
+                        <img
+                          src="/LOGO/15002.png"
+                          alt="Home Ownership Community"
+                          className="w-full h-full object-contain bg-gray-50"
+                        />
                       )}
                     </div>
                     <div className="p-6">

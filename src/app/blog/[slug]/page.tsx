@@ -101,15 +101,13 @@ export default async function BlogPostPage({ params }: Props) {
       </section>
 
       {/* Featured Image */}
-      {normalizedPost.image && (
-        <div className="max-w-4xl mx-auto px-4 -mt-4">
-          <img
-            src={normalizedPost.image}
-            alt={normalizedPost.imageAlt}
-            className="w-full h-96 object-cover rounded-xl shadow-lg"
-          />
-        </div>
-      )}
+      <div className="max-w-4xl mx-auto px-4 -mt-4">
+        <img
+          src={normalizedPost.image || '/LOGO/15002.png'}
+          alt={normalizedPost.imageAlt || 'Home Ownership Community'}
+          className="w-full h-96 object-cover rounded-xl shadow-lg"
+        />
+      </div>
 
       {/* Article Content */}
       <section className="py-16 bg-white">

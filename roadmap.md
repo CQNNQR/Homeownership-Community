@@ -37,6 +37,8 @@
 - [x] Create Resources page with tools and guides
 - [x] Create Books page with book listings
 - [x] Create Contact page with form
+- [x] WordPress WPGraphQL integration (live blog from WordPress)
+- [x] Add logo placeholder for posts without featured images
 - [ ] Add user authentication (if needed)
 - [ ] Integrate with third-party services
 
