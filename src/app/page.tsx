@@ -85,7 +85,7 @@ export default function Home() {
             </a>
             <a
               href="#books"
-              className="bg-[#1E2A1E]/80 hover:bg-[#1E2A1E] text-white font-semibold px-8 py-4 rounded text-base transition-colors border border-white/30 inline-flex items-center justify-center gap-2"
+              className="bg-black/80 hover:bg-black text-white font-semibold px-8 py-4 rounded text-base transition-colors border border-white/30 inline-flex items-center justify-center gap-2"
             >
               Get My Book
             </a>
