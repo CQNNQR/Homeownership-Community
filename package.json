@@ -1,0 +1,35 @@
+{
+  "name": "homeownership-community",
+  "version": "1.0.0",
+  "description": "The Homeownership Community Website",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "vercel-build": "next build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CQNNQR/Homeownership-Community.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CQNNQR/Homeownership-Community/issues"
+  },
+  "homepage": "https://github.com/CQNNQR/Homeownership-Community#readme",
+  "dependencies": {
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^6.0.3"
+  }
+}
