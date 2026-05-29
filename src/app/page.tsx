@@ -60,17 +60,20 @@ export default function Home() {
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto py-24">
           {/* Welcome Pill */}
           <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-5 py-2 mb-8">
-            <p className="text-white/90 text-sm font-medium tracking-wide">Welcome to Your Future</p>
+            <p className="text-white/90 text-sm font-medium tracking-wide">Welcome to the Ownership Movement</p>
           </div>
 
           {/* Main Headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
-            Become a <span className="text-red-500">Real Estate Investor</span> & Future Landlord
+            Build <span className="text-red-500">Generational Wealth</span> Through <span className="text-red-500">Real Estate Ownership</span>
           </h1>
 
           {/* Subheadline */}
-          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Join The Homeownership Community. Stay informed with our latest insights, resources, and guides to build your real estate portfolio.
+          <p className="text-lg md:text-xl text-white/80 mb-6 max-w-2xl mx-auto leading-relaxed">
+            Join The Home Ownership Community — a growing network dedicated to helping future homeowners, real estate investors, and aspiring landlords achieve <strong className="text-white">financial freedom through ownership</strong>.
+          </p>
+          <p className="text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed">
+            We Create Owners.
           </p>
 
           {/* CTA Buttons */}
@@ -79,7 +82,7 @@ export default function Home() {
               href="/blog"
               className="bg-red-700 hover:bg-red-800 text-white font-semibold px-8 py-4 rounded text-base transition-colors inline-flex items-center justify-center gap-2"
             >
-              Read Our Blog
+              Start Your Journey
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -98,9 +101,9 @@ export default function Home() {
       <section id="blog" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-black mb-4">Latest from the Blog</h2>
+            <h2 className="text-4xl font-bold text-black mb-4">Real Estate Investing & Homeownership Education</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Insights, tips, and strategies for navigating the high-end real estate market and building generational wealth.
+              Insights, tips, and strategies for navigating the real estate market, building generational wealth, and developing your ownership mindset.
             </p>
           </div>
 
@@ -191,7 +194,7 @@ export default function Home() {
               href="/blog"
               className="inline-flex items-center justify-center px-8 py-4 border-2 border-black text-black font-semibold rounded hover:bg-black hover:text-white transition-colors"
             >
-              View All Posts
+              Explore All Resources
             </Link>
           </div>
         </div>
@@ -202,12 +205,12 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Author Badge */}
           <div className="inline-block bg-red-700 text-white text-xs font-bold px-4 py-2 mb-6">
-            Author & Expert
+            I Create Owners
           </div>
 
-          <h2 className="text-4xl font-bold text-black mb-4">Master Real Estate with Our Exclusive Books</h2>
+          <h2 className="text-4xl font-bold text-black mb-4">Master Real Estate Investing & Wealth Building</h2>
           <p className="text-gray-600 mb-12 max-w-2xl">
-            Take your knowledge to the next level. Our comprehensive guides are available on Amazon and cover everything from your first purchase to managing a multi-million dollar portfolio.
+            Take your knowledge to the next level with our comprehensive guides on property ownership, real estate investing, and building generational wealth — available on Amazon.
           </p>
 
           {/* Book List */}
@@ -247,16 +250,16 @@ export default function Home() {
 
           {/* Other Resources */}
           <div className="mt-12 pt-8 border-t border-gray-200">
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Other Resources & Sites</p>
+            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Homeownership Resources</p>
             <div className="space-y-3">
               <Link href="/resources" className="flex items-center gap-2 text-black font-medium hover:text-red-700 transition-colors">
-                Real Estate Investor Portal
+                Financial Literacy Resources
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </Link>
               <Link href="/resources" className="flex items-center gap-2 text-black font-medium hover:text-red-700 transition-colors">
-                Property Management Tools
+                Investment Property Guides
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
@@ -271,7 +274,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4">
           <img
             src="/assets/join the community.png"
-            alt="Join the Community"
+            alt="Join The Home Ownership Community - We Create Owners"
             className="w-full rounded-xl shadow-2xl"
           />
         </div>
@@ -288,7 +291,12 @@ export default function Home() {
 
           {/* Mission Statement */}
           <p className="text-center text-gray-500 mb-8 max-w-md mx-auto">
-            Empowering the next generation of real estate investors and landlords.
+            Empowering future homeowners, real estate investors, and aspiring landlords to build generational wealth through ownership.
+          </p>
+
+          {/* Tagline */}
+          <p className="text-center text-red-700 font-semibold mb-8">
+            We Create Owners.
           </p>
 
           {/* Social Links */}

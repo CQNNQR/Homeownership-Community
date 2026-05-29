@@ -7,7 +7,7 @@ const blogPosts = [
     slug: 'how-to-spot-value-in-high-end-real-estate',
     title: 'How to Spot Value in High-End Real Estate',
     excerpt: 'Learn the key indicators that separate great investments from overpriced properties in luxury markets.',
-    category: 'Investing',
+    category: 'Investment Properties',
     date: 'October 12, 2024',
     image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&auto=format&fit=crop',
     readTime: '8 min read',
@@ -16,7 +16,7 @@ const blogPosts = [
     slug: 'why-joining-real-estate-community-accelerates-success',
     title: 'Why Joining a Real Estate Community Accelerates Your Success',
     excerpt: 'Discover how networking with fellow investors can unlock opportunities you won\'t find alone.',
-    category: 'Community',
+    category: 'Real Estate Community',
     date: 'October 8, 2024',
     image: null,
     readTime: '6 min read',
@@ -25,7 +25,7 @@ const blogPosts = [
     slug: 'managing-high-end-properties-landlords-guide',
     title: 'Managing High-End Properties: A Landlord\'s Guide',
     excerpt: 'Essential strategies for maintaining luxury rentals and keeping tenants satisfied long-term.',
-    category: 'Landlord Tips',
+    category: 'Future Landlord',
     date: 'October 14, 2024',
     image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop',
     readTime: '10 min read',
@@ -34,7 +34,7 @@ const blogPosts = [
     slug: 'financing-your-first-investment-property',
     title: 'Financing Your First Investment Property',
     excerpt: 'Understanding loan options, down payments, and financing strategies for new investors.',
-    category: 'Investing',
+    category: 'Mortgage Education',
     date: 'October 20, 2024',
     image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&auto=format&fit=crop',
     readTime: '12 min read',
@@ -43,7 +43,7 @@ const blogPosts = [
     slug: 'building-generational-wealth-through-real-estate',
     title: 'Building Generational Wealth Through Real Estate',
     excerpt: 'How strategic property investments can create lasting wealth for your family.',
-    category: 'Investing',
+    category: 'Building Generational Wealth',
     date: 'October 25, 2024',
     image: 'https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?w=800&auto=format&fit=crop',
     readTime: '15 min read',
@@ -52,7 +52,7 @@ const blogPosts = [
     slug: 'market-analysis-for-real-estate-investors',
     title: 'Market Analysis for Real Estate Investors',
     excerpt: 'How to evaluate local markets, trends, and opportunities before making investment decisions.',
-    category: 'Investing',
+    category: 'Real Estate Investing',
     date: 'November 1, 2024',
     image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop',
     readTime: '11 min read',
@@ -67,9 +67,9 @@ export default function BlogPage() {
       {/* Hero */}
       <section className="pt-32 pb-16 bg-[#F9F9F9]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-bold text-black mb-4">Latest from the Blog</h1>
+          <h1 className="text-4xl font-bold text-black mb-4">Real Estate Investing & Homeownership Education</h1>
           <p className="text-gray-600 max-w-2xl">
-            Insights, tips, and strategies for navigating the high-end real estate market and building generational wealth.
+            Expert insights on real estate investing, property ownership, building generational wealth, and developing your ownership mindset. Join our real estate community and start your journey toward financial freedom.
           </p>
         </div>
       </section>
@@ -120,9 +120,9 @@ export default function BlogPage() {
       {/* Newsletter CTA */}
       <section className="py-16 bg-black">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Stay Informed</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Join the Homeownership Movement</h2>
           <p className="text-white/70 mb-8">
-            Get the latest insights, tips, and strategies delivered straight to your inbox.
+            Get expert insights on real estate investing, mortgage education, and wealth building delivered straight to your inbox. Join a community built on one principle: We Create Owners.
           </p>
           <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
             <input

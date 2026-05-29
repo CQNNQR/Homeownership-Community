@@ -33,7 +33,7 @@ export default function ContactPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-bold text-black mb-4">Get In Touch</h1>
           <p className="text-gray-600 max-w-2xl">
-            Have questions about real estate investing or our community? We&apos;d love to hear from you.
+            Have questions about real estate investing, homeownership education, or joining our real estate community? We&apos;d love to hear from future homeowners, investors, and aspiring landlords.
           </p>
         </div>
       </section>

@@ -78,9 +78,9 @@ export default function ResourcesPage() {
       {/* Hero */}
       <section className="pt-32 pb-16 bg-[#F9F9F9]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-bold text-black mb-4">Resources</h1>
+          <h1 className="text-4xl font-bold text-black mb-4">Homeownership Resources & Financial Literacy</h1>
           <p className="text-gray-600 max-w-2xl">
-            Explore our curated collection of guides, templates, and tools to help you succeed in real estate investing.
+            Explore our curated collection of guides, templates, and tools to help you succeed in real estate investing, property ownership, and building generational wealth through ownership.
           </p>
         </div>
       </section>

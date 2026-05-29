@@ -52,11 +52,11 @@ export default function BooksPage() {
       <section className="pt-32 pb-16 bg-[#F9F9F9]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="inline-block bg-red-700 text-white text-xs font-bold px-4 py-2 mb-6">
-            Author & Expert
+            I Create Owners
           </div>
-          <h1 className="text-4xl font-bold text-black mb-4">Master Real Estate with Our Exclusive Books</h1>
+          <h1 className="text-4xl font-bold text-black mb-4">Master Real Estate Investing & Wealth Building</h1>
           <p className="text-gray-600 max-w-2xl">
-            Take your knowledge to the next level. Our comprehensive guides are available on Amazon and cover everything from your first purchase to managing a multi-million dollar portfolio.
+            Take your knowledge to the next level with our comprehensive guides on property ownership, real estate investing strategies, and building generational wealth. Learn from expert insights designed to help you achieve financial freedom through ownership.
           </p>
         </div>
       </section>
@@ -148,9 +148,9 @@ export default function BooksPage() {
       {/* Newsletter */}
       <section className="py-16 bg-black">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Get Book Updates</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Join the Ownership Movement</h2>
           <p className="text-white/70 mb-8">
-            Be the first to know about new books, updates, and exclusive content from our team.
+            Be the first to know about new books, real estate investing insights, and exclusive content. Join a community dedicated to building wealth through property ownership.
           </p>
           <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
             <input
