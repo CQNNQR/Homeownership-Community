@@ -5,7 +5,11 @@ const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://your-wor
 
 const endpoint = `${WORDPRESS_URL}/graphql`;
 
-export const wpClient = new GraphQLClient(endpoint);
+export const wpClient = new GraphQLClient(endpoint, {
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 // GraphQL Queries for WPGraphQL
 export const GET_POSTS = `

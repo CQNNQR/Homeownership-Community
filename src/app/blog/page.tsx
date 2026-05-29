@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
@@ -25,21 +25,36 @@ export default function BlogPage() {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const cancelledRef = useRef(false)
 
   const POSTS_PER_PAGE = 6
 
   useEffect(() => {
+    cancelledRef.current = false
     fetchPosts()
+
+    return () => {
+      cancelledRef.current = true
+    }
   }, [])
 
   async function fetchPosts(cursor?: string) {
+    if (cancelledRef.current) return
+
     try {
       const variables = {
         first: POSTS_PER_PAGE,
         after: cursor || null,
       }
 
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+
       const data: any = await wpClient.request(GET_POSTS, variables)
+      clearTimeout(timeoutId)
+
+      if (cancelledRef.current) return
+
       const postsData = data.posts.nodes.map(normalizePost)
       const newPageInfo = data.posts.pageInfo
 
@@ -52,7 +67,7 @@ export default function BlogPage() {
       setPageInfo(newPageInfo)
       setLoading(false)
     } catch (err) {
-      console.error('Error fetching posts:', err)
+      if (cancelledRef.current) return
       setError('Unable to load blog posts. Please try again later.')
       setLoading(false)
     }

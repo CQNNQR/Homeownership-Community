@@ -4,10 +4,14 @@ import { normalizePost } from '@/lib/utils'
 
 async function getLatestPosts() {
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000)
+
     const data: any = await wpClient.request(GET_POSTS, { first: 3 })
+    clearTimeout(timeoutId)
     return data.posts.nodes.map(normalizePost)
   } catch (err) {
-    console.error('Error fetching posts for homepage:', err)
+    // Silently handle errors to prevent console spam
     return []
   }
 }
