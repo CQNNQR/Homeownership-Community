@@ -39,10 +39,23 @@
 - [x] SEO optimization (integrated SEO keywords throughout site)
 - [x] Add About page with Brandon Bee Dixon bio
 - [x] Add downloadable PDF guides
-- [ ] Add user authentication (if needed)
+- [x] Add user authentication for gated content (Resend)
 - [ ] Integrate with third-party services
 
-### Phase 4: Launch
+### Phase 4: Admin CMS & Customization (In Progress)
+- [ ] Admin authentication (login/logout)
+- [ ] Admin dashboard overview
+- [ ] Blog post management (CRUD)
+- [ ] Rich text editor with TipTap
+- [ ] Media library for images/PDFs
+- [ ] Homepage hero editor
+- [ ] Site settings panel (social links, contact email, podcast URL)
+- [ ] Email subscriber list view
+- [ ] Podcast episode manager
+- [ ] Testimonials section manager
+- [ ] Event/webinar announcements
+
+### Phase 5: Launch
 - [ ] Final testing across devices
 - [ ] Set up custom domain (optional)
 - [ ] Launch and monitor
@@ -224,10 +237,12 @@ Build a fully custom CMS where Brandon can manage all site content without WordP
 
 #### Phase Breakdown
 1. **Phase 1**: Supabase setup, authentication, admin login
-2. **Phase 2**: Blog post management (CRUD operations)
-3. **Phase 3**: Rich text editor + media library
-4. **Phase 4**: Site customization panel
-5. **Phase 5**: Polish, security, performance
+2. **Phase 2**: Admin dashboard with site analytics
+3. **Phase 3**: Blog post management (CRUD)
+4. **Phase 4**: Rich text editor + media library
+5. **Phase 5**: Site customization panel
+6. **Phase 6**: Email subscribers, podcast episodes, testimonials
+7. **Phase 7**: Polish, security, performance
 
 ### Option B: Auto-Generated Images for Blogs
 - [ ] Integrate AI image generation (DALL-E, Midjourney API)
