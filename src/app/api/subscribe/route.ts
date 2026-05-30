@@ -3,10 +3,9 @@ import { Resend } from 'resend'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(request: Request) {
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
     const { email } = await request.json()
 
     if (!email || !email.includes('@')) {
