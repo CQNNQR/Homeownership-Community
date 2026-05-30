@@ -72,13 +72,13 @@ export default function BooksPage() {
               >
                 <div className="p-8">
                   <div className="flex flex-col md:flex-row gap-8">
-                    {/* Book Cover Placeholder */}
+                    {/* Book Cover */}
                     <div className="flex-shrink-0">
-                      <div className="bg-gradient-to-br from-gray-800 to-black w-48 h-72 rounded-lg shadow-lg flex items-center justify-center">
-                        <div className="text-center p-4">
-                          <p className="text-white font-bold text-sm">{book.title}</p>
-                        </div>
-                      </div>
+                      <img
+                        src={index === 0 ? '/book-message-to-the-businessman.jpg' : '/book-sales-nucleus.jpg'}
+                        alt={book.title}
+                        className="w-48 h-72 rounded-lg shadow-lg object-cover"
+                      />
                     </div>
                     {/* Book Details */}
                     <div className="flex-1">
