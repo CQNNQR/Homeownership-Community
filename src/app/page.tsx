@@ -15,6 +15,7 @@ export default function Home() {
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <Link href="/blog" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Blog</Link>
+              <Link href="/about" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">About</Link>
               <Link href="/resources" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Resources</Link>
               <Link href="/books" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Books</Link>
               <JoinCommunityButton />
