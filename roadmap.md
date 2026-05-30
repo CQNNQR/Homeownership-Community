@@ -37,40 +37,62 @@
 - [x] Create Resources page with tools and guides
 - [x] Create Books page with book listings
 - [x] Create Contact page with form
-- [x] WordPress REST API integration (live blog from WordPress)
 - [x] Add logo placeholder for posts without featured images
+- [x] SEO optimization (integrated SEO keywords throughout site)
 - [ ] Add user authentication (if needed)
 - [ ] Integrate with third-party services
 
 ### Phase 4: Launch
-- [x] SEO optimization (integrated SEO keywords throughout site)
 - [ ] Final testing across devices
 - [ ] Set up custom domain (optional)
 - [ ] Launch and monitor
 
 ---
 
-## WordPress Integration - RSS Solution (Near-Term)
+## WordPress Integration - ATTEMPTS & ISSUES
 
-### Why We Need This
-- WordPress.com Personal plan blocks REST API access from browsers
-- WordPress.com staging sites block external requests via Cloudflare
-- Need a workaround to fetch blog posts without server-side API calls
+### Issue Summary
+- WordPress.com staging site (`bdixon7955e29543-dcwxs.wpcomstaging.com`) blocks browser requests via Cloudflare
+- Error: `net::ERR_INSUFFICIENT_RESOURCES` - browser cannot establish TCP connection to WordPress
+- Server-side (curl) can reach WordPress fine - only browser is blocked
 
-### RSS-to-JSON Approach
-- [x] Install `rss-parser` npm package
-- [x] Create API route to fetch and parse WordPress RSS feed
-- [x] Map RSS feed data to blog post components
-- [x] Add error handling and fallback content
-- [ ] Test with WordPress.com free subdomain
+### Attempt 1: WPGraphQL Plugin
+- [x] Installed WPGraphQL plugin on WordPress.com staging
+- [x] Created GraphQL client and queries
+- **Result**: Failed - same `ERR_INSUFFICIENT_RESOURCES` error
 
-**RSS Feed URL Pattern**: `https://yoursite.wordpress.com/feed/`
+### Attempt 2: WordPress REST API (Direct)
+- [x] Switched from GraphQL to native WordPress REST API
+- [x] Created REST API fetch functions with timeout
+- **Result**: Failed - same `ERR_INSUFFICIENT_RESOURCES` error
+
+### Attempt 3: React Infinite Loop Fix
+- [x] Fixed React infinite loop in useEffect (added useCallback, proper dependency array)
+- [x] Added hasInitialized flag to prevent double-fetching
+- **Result**: Failed - error persists, not a React code issue
+
+### Attempt 4: WordPress RSS-to-JSON
+- [x] Installed `rss-parser` npm package
+- [x] Created RSS parsing functions
+- [x] Updated all blog components for RSS format
+- **Result**: Failed - WordPress.com staging blocks RSS feed too via Cloudflare
+
+### Attempt 5: API Route Proxy
+- [x] Created Next.js API routes (`/api/posts`, `/api/post/[slug]`)
+- [x] Client components fetch from our API route instead of WordPress directly
+- [x] Vercel server fetches from WordPress (server-to-server, no browser blocking)
+- **Result**: Still investigating - Vercel server should be able to reach WordPress
+
+### WordPress.com Support Conclusion
+- WordPress agent confirmed `.wpcomstaging.com` URLs should support REST API
+- Agent suggested issue was React infinite loop (we fixed this)
+- Issue persists despite fixes - likely Cloudflare configuration on staging
 
 ---
 
-## Future Enhancements (Down the Road)
+## Future Enhancements
 
-### Custom CMS & Admin Dashboard
+### Option A: Custom CMS & Admin Dashboard (Recommended)
 
 Build a fully custom CMS where Brandon can manage all site content without WordPress.
 
@@ -114,10 +136,22 @@ users (Supabase Auth)
 4. **Phase 4**: Site customization panel
 5. **Phase 5**: Polish, security, performance
 
+### Option B: Self-Hosted WordPress
+- Move to self-hosted WordPress on hosting (Bluehost, SiteGround, etc.)
+- Full control over REST API, no Cloudflare blocking
+- Brandon can use familiar WordPress admin interface
+
+### Option C: Production WordPress.com Site
+- Create a production WordPress.com site (not staging)
+- Production sites typically don't have Cloudflare blocking
+- Use that URL for REST API access
+
 ---
 
 ## Notes
 
 - Vercel is configured to auto-deploy on every push to the `master` branch
-- WordPress.com blocks REST API on Personal plan - using RSS fallback
-- Future phases will move to custom Supabase-powered CMS
+- WordPress.com staging Cloudflare blocking remains unresolved
+- API route proxy approach is the latest attempt - may need further debugging
+- Custom CMS via Supabase is recommended long-term solution
+- Alternative: Use self-hosted WordPress or production WordPress.com site
