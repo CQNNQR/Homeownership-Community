@@ -2,8 +2,8 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { getPostBySlug, getPosts } from '@/lib/wordpress'
-import { normalizePost, formatDate } from '@/lib/utils'
+import { getPostBySlugFromRSS, getPostsFromRSS } from '@/lib/wordpress'
+import { normalizePost, getReadingTime, formatDate } from '@/lib/utils'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -12,7 +12,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   try {
-    const post = await getPostBySlug(slug)
+    const post = await getPostBySlugFromRSS(slug)
 
     if (!post) {
       return { title: 'Post Not Found' }
@@ -41,11 +41,11 @@ export default async function BlogPostPage({ params }: Props) {
   let relatedPosts: any[] = []
 
   try {
-    post = await getPostBySlug(slug)
+    post = await getPostBySlugFromRSS(slug)
 
     if (post) {
       // Fetch related posts (latest posts, excluding current)
-      const { posts: allPosts } = await getPosts(1, 4)
+      const { posts: allPosts } = await getPostsFromRSS(1, 4)
       relatedPosts = allPosts
         .filter((p) => p.slug !== slug)
         .slice(0, 3)
@@ -97,19 +97,22 @@ export default async function BlogPostPage({ params }: Props) {
       </section>
 
       {/* Featured Image */}
-      <div className="max-w-4xl mx-auto px-4 -mt-4">
-        <img
-          src={normalizedPost.image || '/LOGO/15002.png'}
-          alt={normalizedPost.imageAlt || 'Home Ownership Community'}
-          className="w-full h-96 object-cover rounded-xl shadow-lg"
-        />
-      </div>
+      {normalizedPost.image && (
+        <div className="max-w-4xl mx-auto px-4 -mt-4">
+          <img
+            src={normalizedPost.image}
+            alt={normalizedPost.imageAlt || 'Home Ownership Community'}
+            className="w-full h-96 object-cover rounded-xl shadow-lg"
+          />
+        </div>
+      )}
 
       {/* Article Content */}
       <section className="py-16 bg-white">
-        <article className="max-w-3xl mx-auto px-4 prose prose-lg max-w-none">
-          <div dangerouslySetInnerHTML={{ __html: post.content?.rendered || '' }} />
-        </article>
+        <article
+          className="max-w-3xl mx-auto px-4 prose prose-lg max-w-none"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
       </section>
 
       {/* Author Box */}

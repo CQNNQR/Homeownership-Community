@@ -1,7 +1,7 @@
-import { WPRestPost } from './wordpress';
-
 export function formatDate(dateString: string): string {
+  if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -10,6 +10,7 @@ export function formatDate(dateString: string): string {
 }
 
 export function stripHtml(html: string): string {
+  if (!html) return '';
   return html.replace(/<[^>]*>/g, '').trim();
 }
 
@@ -20,34 +21,26 @@ export function truncateExcerpt(excerpt: string, maxLength: number = 150): strin
 }
 
 export function getReadingTime(content: string): string {
+  if (!content) return '5 min read';
   const wordsPerMinute = 200;
-  const wordCount = stripHtml(content).split(/\s+/).length;
+  const wordCount = stripHtml(content).split(/\s+/).filter(Boolean).length;
   const minutes = Math.ceil(wordCount / wordsPerMinute);
   return `${minutes} min read`;
 }
 
-export function getCategoryName(categories: number[], embedded?: WPRestPost['_embedded']): string {
-  if (embedded?.['wp:term']?.[0]?.[0]?.name) {
-    return embedded['wp:term'][0][0].name;
-  }
-  return 'General';
-}
-
-export function normalizePost(post: WPRestPost) {
-  const featuredImage = post._embedded?.['wp:featuredmedia']?.[0];
-
+export function normalizePost(post: any) {
   return {
     id: String(post.id),
     slug: post.slug,
-    title: stripHtml(post.title.rendered),
-    excerpt: truncateExcerpt(post.excerpt.rendered),
-    content: post.content?.rendered || '',
+    title: stripHtml(post.title),
+    excerpt: truncateExcerpt(post.excerpt || ''),
+    content: post.content || '',
     date: formatDate(post.date),
-    modified: formatDate(post.modified),
-    image: featuredImage?.source_url || null,
-    imageAlt: featuredImage?.alt_text || stripHtml(post.title.rendered),
-    category: getCategoryName(post.categories, post._embedded),
-    author: post._embedded?.author?.[0]?.name || 'The Home Ownership Community',
-    readingTime: post.content?.rendered ? getReadingTime(post.content.rendered) : '5 min read',
+    image: post.featuredImage || null,
+    imageAlt: stripHtml(post.title) || 'Home Ownership Community',
+    category: post.category || 'General',
+    author: post.author || 'The Home Ownership Community',
+    readingTime: post.content ? getReadingTime(post.content) : '5 min read',
+    link: post.link || '',
   };
 }

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { getPosts, WPRestPageInfo } from '@/lib/wordpress'
+import { getPostsFromRSS } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
 interface Post {
@@ -19,54 +19,45 @@ interface Post {
   readingTime: string
 }
 
+const POSTS_PER_PAGE = 6
+
 export default function BlogPage() {
   const [posts, setPosts] = useState<Post[]>([])
-  const [pageInfo, setPageInfo] = useState<WPRestPageInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const cancelledRef = useRef(false)
-
-  const POSTS_PER_PAGE = 6
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
 
   useEffect(() => {
-    cancelledRef.current = false
     fetchPosts(1)
-
-    return () => {
-      cancelledRef.current = true
-    }
   }, [])
 
   async function fetchPosts(page: number) {
-    if (cancelledRef.current) return
-
     try {
-      const { posts: newPosts, pageInfo: newPageInfo } = await getPosts(page, POSTS_PER_PAGE)
+      const result = await getPostsFromRSS(page, POSTS_PER_PAGE)
 
-      if (cancelledRef.current) return
-
-      const normalizedPosts = newPosts.map(normalizePost)
+      const normalizedPosts = result.posts.map(normalizePost)
 
       if (page > 1) {
         setPosts(prev => [...prev, ...normalizedPosts])
-        setLoadingMore(false)
       } else {
         setPosts(normalizedPosts)
       }
-      setPageInfo(newPageInfo)
+      setHasMore(result.hasMore)
+      setCurrentPage(page)
       setLoading(false)
     } catch (err) {
-      if (cancelledRef.current) return
       setError('Unable to load blog posts. Please try again later.')
       setLoading(false)
     }
   }
 
   async function loadMore() {
-    if (!pageInfo || pageInfo.currentPage >= pageInfo.totalPages || loadingMore) return
+    if (!hasMore || loadingMore) return
     setLoadingMore(true)
-    await fetchPosts(pageInfo.currentPage + 1)
+    await fetchPosts(currentPage + 1)
+    setLoadingMore(false)
   }
 
   return (
@@ -157,7 +148,7 @@ export default function BlogPage() {
               </div>
 
               {/* Load More Button */}
-              {pageInfo && pageInfo.currentPage < pageInfo.totalPages && (
+              {hasMore && (
                 <div className="text-center mt-12">
                   <button
                     onClick={loadMore}

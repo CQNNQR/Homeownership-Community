@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { getPosts } from '@/lib/wordpress'
+import { getPostsFromRSS } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
 async function getLatestPosts() {
   try {
-    const { posts } = await getPosts(1, 3)
+    const { posts } = await getPostsFromRSS(1, 3)
     return posts.map(normalizePost)
   } catch (err) {
     return []
