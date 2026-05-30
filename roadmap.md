@@ -101,6 +101,13 @@ NEXT_PUBLIC_WORDPRESS_URL=https://bdixon7955e29543-dcwxs.wpcomstaging.com
 
 ## SEO & UX Improvements (In Progress)
 
+### Recent UX Fixes (May 29, 2026)
+- [x] Fix "Join the Community" modal clipping/truncation on open
+- [x] Render modal with React portal (`createPortal`) to `document.body` so overlays are not constrained by fixed navigation layout context
+- [x] Apply fix to both shared navigation modal and homepage-specific join button modal paths
+- [x] Increase modal overlay stacking context and mobile-safe top spacing for better viewport fit
+- [x] Add `@types/react-dom` for portal type safety during production builds
+
 ### Quick Wins Completed
 - [x] Add schema markup (Article, Person, FAQ, BreadcrumbList)
 - [x] Add FAQ section template to blog posts
@@ -223,6 +230,7 @@ Build a fully custom CMS where Brandon can manage all site content without WordP
 - Blog auto-categorization works based on content keyword analysis
 - Typography plugin configured with site brand colors
 - Schema markup added for SEO (Article, Person, FAQ, BreadcrumbList)
+- Join Community modal now mounts via portal to `document.body` to prevent clipping in fixed/backdrop-blur navigation contexts
 
 ---
 
