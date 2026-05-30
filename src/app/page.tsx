@@ -180,14 +180,22 @@ export default function Home() {
 
           {/* Social Links */}
           <div className="flex items-center justify-center gap-8 mb-8">
-            <a href="#" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">Twitter</a>
-            <a href="#" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">LinkedIn</a>
-            <a href="#" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">Instagram</a>
+            <a href="https://www.facebook.com/share/1DySwCFJKY/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">Facebook</a>
+            <a href="https://www.instagram.com/billionaireloanofficer?utm_source=qr" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">Instagram</a>
+            <a href="https://www.linkedin.com/in/brandonbeedixon?utm_source=share_via&utm_content=profile&utm_medium=member_ios" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">LinkedIn</a>
+            <a href="https://x.com/billionaire_lo?s=11&t=b8_2VZHBBDvMHx_DZ4ZwPA" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">X (Twitter)</a>
+          </div>
+
+          {/* Contact */}
+          <div className="text-center mb-8">
+            <a href="mailto:brandon@hocmortgage.com" className="text-gray-500 hover:text-red-700 transition-colors text-sm font-medium">
+              brandon@hocmortgage.com
+            </a>
           </div>
 
           {/* Copyright */}
           <p className="text-center text-gray-400 text-sm">
-            &copy; 2026 The Homeownership Community. All rights reserved.
+            &copy; {new Date().getFullYear()} The Homeownership Community. All rights reserved.
           </p>
         </div>
       </footer>

@@ -29,14 +29,16 @@
 - [x] Design and implement homepage (hero, about, resources, books, blog sections)
 - [x] Implement navigation structure
 - [x] Add responsive design
-- [x] Create all site pages (Blog, Resources, Books, Contact)
-- [ ] Set up testing framework
+- [x] Create all site pages (Blog, Resources, Books, Contact, About)
+- [x] Set up testing framework (Playwright)
 
 ### Phase 3: Content & Features
 - [x] Create Resources page with tools and guides
 - [x] Create Books page with book listings
 - [x] Create Contact page with form
 - [x] SEO optimization (integrated SEO keywords throughout site)
+- [x] Add About page with Brandon Bee Dixon bio
+- [x] Add downloadable PDF guides
 - [ ] Add user authentication (if needed)
 - [ ] Integrate with third-party services
 
@@ -70,6 +72,29 @@ NEXT_PUBLIC_WORDPRESS_URL=https://bdixon7955e29543-dcwxs.wpcomstaging.com
 
 ---
 
+## Brand Information (Completed)
+
+### Brandon Bee Dixon Bio
+- Mortgage Broker & Texas Realtor at NEXA Mortgage
+- 30+ years sales and leadership experience
+- Nearly a decade in mortgage industry
+- Branch Manager with access to 300+ lending institutions
+- "Deal Rescue" specialist - helps clients others have turned down
+- Author of "Message to the Businessman" and "Sales: The Nucleus of Any Profession"
+- Host of Power of Ownership Podcast
+- Mission: "I Create Owners"
+
+### Social Media Links (Updated)
+- Facebook: https://www.facebook.com/share/1DySwCFJKY/?mibextid=wwXIfr
+- Instagram: https://www.instagram.com/billionaireloanofficer?utm_source=qr
+- LinkedIn: https://www.linkedin.com/in/brandonbeedixon?utm_source=share_via&utm_content=profile&utm_medium=member_ios
+- Twitter/X: https://x.com/billionaire_lo?s=11&t=b8_2VZHBBDvMHx_DZ4ZwPA
+
+### Contact
+- Email: brandon@hocmortgage.com
+
+---
+
 ## Blog Features (Completed)
 
 ### Core Blog Functionality
@@ -99,52 +124,47 @@ NEXT_PUBLIC_WORDPRESS_URL=https://bdixon7955e29543-dcwxs.wpcomstaging.com
 
 ---
 
-## SEO & UX Improvements (In Progress)
+## SEO & UX Improvements (Completed)
 
 ### Recent UX Fixes (May 29, 2026)
 - [x] Fix "Join the Community" modal clipping/truncation on open
-- [x] Render modal with React portal (`createPortal`) to `document.body` so overlays are not constrained by fixed navigation layout context
-- [x] Apply fix to both shared navigation modal and homepage-specific join button modal paths
-- [x] Increase modal overlay stacking context and mobile-safe top spacing for better viewport fit
-- [x] Add `@types/react-dom` for portal type safety during production builds
+- [x] Render modal with React portal (`createPortal`) to `document.body`
+- [x] Apply fix to both Navigation and JoinCommunityButton modals
+- [x] Increase modal overlay stacking context and mobile-safe top spacing
+- [x] Add About page with Brandon Bee Dixon bio
+- [x] Update social links with actual URLs
+- [x] Update contact email to brandon@hocmortgage.com
+- [x] Add PDF guides to Resources page
+- [x] Add Podcast link to About page
 
 ### Quick Wins Completed
 - [x] Add schema markup (Article, Person, FAQ, BreadcrumbList)
 - [x] Add FAQ section template to blog posts
-- [ ] Unique meta descriptions per page
-- [ ] Fix broken social links (need actual URLs from Brandon)
-- [ ] Add downloadable resources (need actual files from Brandon)
+- [x] Add About page with Brandon's full bio
+- [x] Update social links with real URLs
+- [x] Add downloadable PDF guides to Resources
+- [x] Update contact email
 
 ### Pending: Requires Info From Brandon
 
-#### Personal Brand
-- [ ] Brandon Bee Dixon bio (photo, credentials, story)
-- [ ] Author photo upload
-- [ ] Personal brand trust signals for E-E-A-T
-
-#### Social Links
-- [ ] Twitter/X profile URL
-- [ ] LinkedIn profile URL
-- [ ] Instagram profile URL
-
-#### Community & Resources
-- [ ] Community platform link (Discord, Facebook group, etc.)
-- [ ] Actual downloadable resource files (PDFs, spreadsheets, etc.)
-- [ ] Lead magnet / email incentive
-- [ ] Email subscribe confirmation flow
-
-#### Content
-- [ ] 2-3 long-form pillar articles (2,000+ words)
-- [ ] FAQ sections for each blog post (template ready)
+#### Still Needed
+- [ ] Power of Ownership Podcast URL
+- [ ] Amazon links for books:
+  - "The Future Landlord Playbook"
+  - "Investing in High-End Real Estate"
+  - "Message to the Businessman"
+  - "Sales: The Nucleus of Any Profession"
 - [ ] New blog posts (current: 6 posts from Oct-Nov 2024)
 
-#### SEO
-- [ ] Unique meta descriptions per page
-- [ ] Article schema per blog post (template ready)
-- [ ] Person schema for Brandon Bee Dixon
-- [ ] BreadcrumbList schema
-- [ ] robots.txt configuration
-- [ ] sitemap.xml generation
+---
+
+## Playwright Testing (Completed)
+
+- [x] 50 passing tests covering all pages and interactions
+- [x] Modal functionality tests
+- [x] Navigation tests
+- [x] Form submission tests
+- [x] Blog post flow tests
 
 ---
 
@@ -158,7 +178,7 @@ NEXT_PUBLIC_WORDPRESS_URL=https://bdixon7955e29543-dcwxs.wpcomstaging.com
 ### Attempted Solutions
 
 | Attempt | Approach | Result |
-|--------|----------|--------|
+|---------|----------|--------|
 | 1 | WPGraphQL Plugin | Failed - Cloudflare blocked |
 | 2 | WordPress REST API (Direct) | Failed - Cloudflare blocked |
 | 3 | React Infinite Loop Fix | Partial - not root cause |
@@ -230,24 +250,5 @@ Build a fully custom CMS where Brandon can manage all site content without WordP
 - Blog auto-categorization works based on content keyword analysis
 - Typography plugin configured with site brand colors
 - Schema markup added for SEO (Article, Person, FAQ, BreadcrumbList)
-- Join Community modal now mounts via portal to `document.body` to prevent clipping in fixed/backdrop-blur navigation contexts
-
----
-
-## Info Needed From Brandon (Action Items)
-
-To complete the SEO & UX improvements, I need info below from Brandon:
-
-### High Priority
-1. **Social URLs** - Twitter/X, LinkedIn, Instagram links
-2. **Community Link** - Discord/Facebook group/membership portal URL
-3. **Author Bio** - Photo, credentials, story for "About" page
-4. **Downloadable Resources** - Any PDFs, spreadsheets, guides to link
-
-### Medium Priority
-5. **Lead Magnet** - What incentive for email signup?
-6. **FAQ Content** - Common questions about real estate investing
-
-### Lower Priority (Long-term)
-7. **New Blog Posts** - Consistent publishing schedule
-8. **Pillar Content** - Long-form guides (2,000+ words each)
+- Join Community modal now mounts via portal to `document.body` to prevent clipping
+- Brandon Bee Dixon profile flyer available at `/bio/profile picture flyer .PNG`

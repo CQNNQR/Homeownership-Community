@@ -39,7 +39,7 @@ test.describe('Homepage', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.click('nav button:has-text("Join the Community")');
     await expect(page.locator('h3:has-text("Join the Community")')).toBeVisible();
-    await page.click('.fixed.inset-0.z-50', { position: { x: 10, y: 10 } });
+    await page.click('.fixed.inset-0.z-\\[100\\]', { position: { x: 10, y: 10 } });
     await expect(page.locator('h3:has-text("Join the Community")')).not.toBeVisible();
   });
 
@@ -293,25 +293,22 @@ test.describe('Resources Page', () => {
     await expect(page).toHaveURL('/resources');
   });
 
-  test('should display resource cards', async ({ page }) => {
+  test('should display guide cards with download buttons', async ({ page }) => {
     await page.goto('/resources');
-    await expect(page.locator('text=Investment Property Calculator')).toBeVisible();
-    await expect(page.locator('text=Property Analysis Spreadsheet')).toBeVisible();
+    await expect(page.locator('text=Real Estate Investment FAQ').first()).toBeVisible();
+    await expect(page.locator('text=Reverse Mortgage Guide').first()).toBeVisible();
   });
 
-  test('should click Access Resource button', async ({ page }) => {
+  test('should have download PDF buttons', async ({ page }) => {
     await page.goto('/resources');
-    const accessButton = page.locator('button:has-text("Access Resource")').first();
-    await accessButton.click();
-    // Currently just alert - we verify button is clickable
-    page.on('dialog', async dialog => {
-      await dialog.accept();
-    });
+    const downloadButton = page.locator('a:has-text("Download PDF")').first();
+    await expect(downloadButton).toBeVisible();
   });
 
-  test('should click external resource links', async ({ page }) => {
+  test('should have contact section', async ({ page }) => {
     await page.goto('/resources');
-    await expect(page.locator('text=Real Estate Investor Portal')).toBeVisible();
+    await expect(page.locator('h2:has-text("Looking for Something Specific")')).toBeVisible();
+    await expect(page.locator('a:has-text("Contact Brandon")')).toBeVisible();
   });
 });
 
@@ -391,13 +388,13 @@ test.describe('Contact Page', () => {
 
   test('should display contact information', async ({ page }) => {
     await page.goto('/contact');
-    await expect(page.locator('text=contact@thehomeownershipcommunity.com')).toBeVisible();
+    await expect(page.locator('text=brandon@hocmortgage.com').first()).toBeVisible();
     await expect(page.locator('text=United States')).toBeVisible();
   });
 
   test('should have social media links', async ({ page }) => {
     await page.goto('/contact');
-    await expect(page.locator('footer a:has-text("Twitter")')).toBeVisible();
+    await expect(page.locator('footer a:has-text("X (Twitter)")')).toBeVisible();
     await expect(page.locator('footer a:has-text("LinkedIn")')).toBeVisible();
     await expect(page.locator('footer a:has-text("Instagram")')).toBeVisible();
   });
@@ -471,8 +468,8 @@ test.describe('Join Community Modal - Desktop', () => {
 
     await page.click('nav button:has-text("Join the Community")');
 
-    // Modal container should be visible
-    const modal = page.locator('.fixed.inset-0.z-50').first();
+    // Modal container should be visible (z-[100])
+    const modal = page.locator('.fixed.inset-0.z-\\[100\\]').first();
     await expect(modal).toBeVisible({ timeout: 10000 });
 
     // The modal content should be visible
