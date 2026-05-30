@@ -185,6 +185,7 @@ export default function Home() {
             <a href="https://www.instagram.com/billionaireloanofficer?utm_source=qr" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">Instagram</a>
             <a href="https://www.linkedin.com/in/brandonbeedixon?utm_source=share_via&utm_content=profile&utm_medium=member_ios" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">LinkedIn</a>
             <a href="https://x.com/billionaire_lo?s=11&t=b8_2VZHBBDvMHx_DZ4ZwPA" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">X (Twitter)</a>
+            <Link href="/admin/login" className="text-red-700 hover:text-red-800 transition-colors text-sm font-medium border border-red-700 px-3 py-1 rounded">Admin</Link>
           </div>
 
           {/* Contact */}
