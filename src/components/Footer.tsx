@@ -33,6 +33,7 @@ export default function Footer() {
           <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">Instagram</a>
           <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">LinkedIn</a>
           <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">X (Twitter)</a>
+          <Link href="/admin/login" className="text-gray-400 hover:text-gray-600 transition-colors text-sm font-medium">Admin</Link>
         </div>
 
         {/* Contact */}
@@ -46,13 +47,6 @@ export default function Footer() {
         <p className="text-center text-gray-400 text-sm">
           &copy; {new Date().getFullYear()} The Homeownership Community. All rights reserved.
         </p>
-
-        {/* Admin Link */}
-        <div className="text-center mt-4">
-          <Link href="/admin/login" className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
-            Admin Login
-          </Link>
-        </div>
       </div>
     </footer>
   )
