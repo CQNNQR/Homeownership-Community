@@ -228,7 +228,7 @@ Build a fully custom CMS where Brandon can manage all site content without WordP
 
 ## Info Needed From Brandon (Action Items)
 
-To complete the SEO & UX improvements, Brandon needs to provide:
+To complete the SEO & UX improvements, I need info below from Brandon:
 
 ### High Priority
 1. **Social URLs** - Twitter/X, LinkedIn, Instagram links

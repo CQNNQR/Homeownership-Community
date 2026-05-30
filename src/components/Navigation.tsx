@@ -74,9 +74,9 @@ export default function Navigation() {
 
       {/* Join Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] overflow-y-auto p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+          <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl my-auto">
             <button
               onClick={() => setShowModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
