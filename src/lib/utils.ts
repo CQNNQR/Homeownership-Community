@@ -12,7 +12,39 @@ export function formatDate(dateString: string): string {
 
 export function stripHtml(html: string): string {
   if (!html) return '';
-  return html.replace(/<[^>]*>/g, '').trim();
+  // First decode HTML entities, then remove tags
+  const decoded = decodeHtmlEntities(html);
+  return decoded.replace(/<[^>]*>/g, '').trim();
+}
+
+export function decodeHtmlEntities(text: string): string {
+  if (!text) return '';
+  const entities: { [key: string]: string } = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#8217;': "'",
+    '&#8216;': "'",
+    '&#8220;': '"',
+    '&#8221;': '"',
+    '&#039;': "'",
+    '&nbsp;': ' ',
+    '&mdash;': '—',
+    '&ndash;': '–',
+    '&hellip;': '...',
+    '&#8211;': '–',
+    '&#8212;': '—',
+  };
+
+  let result = text;
+  for (const [entity, char] of Object.entries(entities)) {
+    result = result.replace(new RegExp(entity, 'g'), char);
+  }
+  // Handle numeric entities like &#8217;
+  result = result.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  result = result.replace(/&#x([a-fA-F0-9]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return result;
 }
 
 export function truncateExcerpt(excerpt: string, maxLength: number = 150): string {
