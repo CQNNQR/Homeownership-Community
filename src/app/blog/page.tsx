@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { getPosts } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
 interface Post {
@@ -19,6 +18,14 @@ interface Post {
   readingTime: string
 }
 
+interface APIResponse {
+  posts: any[]
+  pageInfo: {
+    totalPages: number
+    currentPage: number
+  }
+}
+
 const POSTS_PER_PAGE = 6
 
 export default function BlogPage() {
@@ -28,19 +35,24 @@ export default function BlogPage() {
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
-  const [hasInitialized, setHasInitialized] = useState(false)
 
   const fetchPosts = useCallback(async (page: number) => {
     try {
-      const result = await getPosts(page, POSTS_PER_PAGE)
-      const normalizedPosts = result.posts.map(normalizePost)
+      const response = await fetch(`/api/posts?page=${page}&perPage=${POSTS_PER_PAGE}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch')
+      }
+
+      const data: APIResponse = await response.json()
+      const normalizedPosts = data.posts.map(normalizePost)
 
       if (page > 1) {
         setPosts(prev => [...prev, ...normalizedPosts])
       } else {
         setPosts(normalizedPosts)
       }
-      setHasMore(result.pageInfo.totalPages > page)
+      setHasMore(data.pageInfo.totalPages > page)
       setCurrentPage(page)
       setError(null)
     } catch (err) {
@@ -52,14 +64,11 @@ export default function BlogPage() {
   }, [])
 
   useEffect(() => {
-    if (!hasInitialized) {
-      setHasInitialized(true)
-      fetchPosts(1)
-    }
-  }, [hasInitialized, fetchPosts])
+    fetchPosts(1)
+  }, [fetchPosts])
 
   function loadMore() {
-    if (hasMore && !loadingMore) {
+    if (hasMore && !loadingMore && !error) {
       setLoadingMore(true)
       fetchPosts(currentPage + 1)
     }

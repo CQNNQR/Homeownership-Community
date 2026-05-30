@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { getPostBySlug, getPosts } from '@/lib/wordpress'
+import { getPostBySlug as getPostFromWordPress, getPosts as getPostsFromWordPress } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
 interface Props {
@@ -12,7 +12,8 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   try {
-    const post = await getPostBySlug(slug)
+    // Use direct WordPress fetch for server component (no browser blocking)
+    const post = await getPostFromWordPress(slug)
 
     if (!post) {
       return { title: 'Post Not Found' }
@@ -41,11 +42,11 @@ export default async function BlogPostPage({ params }: Props) {
   let relatedPosts: any[] = []
 
   try {
-    post = await getPostBySlug(slug)
+    // Use direct WordPress fetch for server component
+    post = await getPostFromWordPress(slug)
 
     if (post) {
-      // Fetch related posts (latest posts, excluding current)
-      const { posts: allPosts } = await getPosts(1, 4)
+      const { posts: allPosts } = await getPostsFromWordPress(1, 4)
       relatedPosts = allPosts
         .filter((p) => p.slug !== slug)
         .slice(0, 3)
