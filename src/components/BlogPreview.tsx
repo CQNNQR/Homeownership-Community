@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { getPosts } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
-// Revalidate every 60 seconds to keep blog fresh
-export const revalidate = 60
+// Revalidate every 10 seconds to keep blog fresh
+export const revalidate = 10
 
 async function getLatestPosts() {
   try {

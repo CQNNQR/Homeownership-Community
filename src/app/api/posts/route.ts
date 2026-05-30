@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   try {
     const url = `${WORDPRESS_URL}/wp-json/wp/v2/posts?_embed&page=${page}&per_page=${perPage}&status=publish`
     const response = await fetch(url, {
-      next: { revalidate: 60 }, // Cache for 60 seconds
+      next: { revalidate: 10 }, // Cache for 10 seconds
     })
 
     if (!response.ok) {

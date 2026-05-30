@@ -11,7 +11,7 @@ export async function GET(
   try {
     const url = `${WORDPRESS_URL}/wp-json/wp/v2/posts?slug=${slug}&_embed&status=publish`
     const response = await fetch(url, {
-      next: { revalidate: 60 },
+      next: { revalidate: 10 },
     })
 
     if (!response.ok) {
