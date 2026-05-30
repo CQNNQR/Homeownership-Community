@@ -33,7 +33,7 @@ export default function Footer() {
           <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">Instagram</a>
           <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">LinkedIn</a>
           <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black transition-colors text-sm font-medium">X (Twitter)</a>
-          <Link href="/admin/login" className="text-gray-400 hover:text-gray-600 transition-colors text-sm font-medium">Admin</Link>
+          <Link href="/admin/login" className="text-red-700 hover:text-red-800 transition-colors text-sm font-medium border border-red-700 px-3 py-1 rounded">Admin</Link>
         </div>
 
         {/* Contact */}
