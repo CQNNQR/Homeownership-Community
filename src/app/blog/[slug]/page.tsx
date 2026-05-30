@@ -5,6 +5,9 @@ import Footer from '@/components/Footer'
 import { getPostBySlug as getPostFromWordPress, getPosts as getPostsFromWordPress } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
+// Revalidate every 60 seconds to keep blog fresh
+export const revalidate = 60
+
 interface Props {
   params: Promise<{ slug: string }>
 }
