@@ -1,11 +1,25 @@
+'use client'
+
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
+import { useState } from 'react'
 
-const guides = [
+const freeGuides = [
+  {
+    title: 'HOC Real Estate Investment FAQ',
+    description: 'The Homeownership Community guide to real estate investment frequently asked questions.',
+    category: 'Free Guide',
+    file: '/guides/hoc-rei-faq.pdf',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
   {
     title: 'Real Estate Investment FAQ',
     description: 'Frequently asked questions about real estate investing, property ownership, and building wealth through real estate.',
-    category: 'Guides',
+    category: 'Free Guide',
     file: '/guides/REI FAQ BrandonBeeDixon.pdf',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13,31 +27,35 @@ const guides = [
       </svg>
     ),
   },
-  {
-    title: 'Reverse Mortgage Guide',
-    description: 'Comprehensive guide to reverse mortgages, how they work, pros and cons, and whether they might be right for you.',
-    category: 'Guides',
-    file: '/guides/Reverse Mortgage Guide BrandonBeeDixon.pdf',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-  },
-  {
-    title: 'HOC Real Estate Investment FAQ',
-    description: 'The Homeownership Community guide to real estate investment frequently asked questions.',
-    category: 'Guides',
-    file: '/guides/hoc-rei-faq.pdf',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-      </svg>
-    ),
-  },
 ]
 
+const lockedGuide = {
+  title: 'Reverse Mortgage Guide',
+  description: 'Comprehensive guide to reverse mortgages, how they work, pros and cons, and whether they might be right for you.',
+  category: 'Member Exclusive',
+  icon: (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  ),
+}
+
 export default function ResourcesPage() {
+  const [showJoinModal, setShowJoinModal] = useState(false)
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    alert('Thank you for joining! Check your email for the exclusive guide.')
+    setShowJoinModal(false)
+    setFormData({ firstName: '', lastName: '', email: '', phone: '' })
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navigation />
@@ -52,11 +70,14 @@ export default function ResourcesPage() {
         </div>
       </section>
 
-      {/* Guides Grid */}
+      {/* Free Guides Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {guides.map((guide, index) => (
+          <h2 className="text-2xl font-bold text-black mb-2">Free Downloads</h2>
+          <p className="text-gray-600 mb-8">Download these guides instantly, no signup required.</p>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8">
+            {freeGuides.map((guide, index) => (
               <div
                 key={index}
                 className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow"
@@ -67,7 +88,7 @@ export default function ResourcesPage() {
                       {guide.icon}
                     </div>
                   </div>
-                  <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
+                  <span className="bg-green-100 text-green-700 text-xs font-medium px-3 py-1 rounded-full">
                     {guide.category}
                   </span>
                   <h3 className="text-xl font-bold text-black mt-4 mb-2">{guide.title}</h3>
@@ -83,7 +104,7 @@ export default function ResourcesPage() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Download PDF
+                    Download Free PDF
                   </a>
                 </div>
               </div>
@@ -91,6 +112,122 @@ export default function ResourcesPage() {
           </div>
         </div>
       </section>
+
+      {/* Member Exclusive Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-black mb-2">Member Exclusive</h2>
+          <p className="text-gray-600 mb-8">Join the community to unlock premium guides and resources.</p>
+
+          <div className="max-w-md">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+              <div className="p-6">
+                <div className="bg-gray-100 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
+                  <div className="text-gray-600">
+                    {lockedGuide.icon}
+                  </div>
+                </div>
+                <span className="bg-red-700 text-white text-xs font-medium px-3 py-1 rounded-full">
+                  {lockedGuide.category}
+                </span>
+                <h3 className="text-xl font-bold text-black mt-4 mb-2">{lockedGuide.title}</h3>
+                <p className="text-gray-600 text-sm mb-4">{lockedGuide.description}</p>
+              </div>
+              <div className="px-6 pb-6">
+                <button
+                  onClick={() => setShowJoinModal(true)}
+                  className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-3 rounded transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Join to Download
+                </button>
+                <p className="text-gray-400 text-xs text-center mt-3">
+                  Free to join. Get instant access.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Join Modal */}
+      {showJoinModal && (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-8 sm:pt-[10vh] overflow-y-auto">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowJoinModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl my-auto">
+            <button
+              onClick={() => setShowJoinModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h3 className="text-2xl font-bold text-black mb-2">Join the Community</h3>
+            <p className="text-gray-600 mb-4">Fill out the form below and we&apos;ll send you the exclusive guide instantly.</p>
+            <p className="text-red-700 font-semibold mb-6">Get free access to the Reverse Mortgage Guide!</p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-2">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                    placeholder="John"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-2">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                  placeholder="john@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2"
+              >
+                Get Instant Access
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Contact Section */}
       <section className="py-16 bg-[#F9F9F9]">

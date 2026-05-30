@@ -301,7 +301,7 @@ test.describe('Resources Page', () => {
 
   test('should have download PDF buttons', async ({ page }) => {
     await page.goto('/resources');
-    const downloadButton = page.locator('a:has-text("Download PDF")').first();
+    const downloadButton = page.locator('a:has-text("Download Free PDF")').first();
     await expect(downloadButton).toBeVisible();
   });
 

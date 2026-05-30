@@ -11,6 +11,9 @@ const socialLinks = {
   instagram: 'https://www.instagram.com/billionaireloanofficer?utm_source=qr',
   linkedin: 'https://www.linkedin.com/in/brandonbeedixon?utm_source=share_via&utm_content=profile&utm_medium=member_ios',
   twitter: 'https://x.com/billionaire_lo?s=11&t=b8_2VZHBBDvMHx_DZ4ZwPA',
+  youtube: 'https://youtube.com/@billionaireloanofficer?si=x_1rO-5t4U3rdgbf',
+  amazon1: 'https://a.co/d/09f8MkL3',
+  amazon2: 'https://a.co/d/0bXRCoq6',
 }
 
 export default function AboutPage() {
@@ -167,13 +170,72 @@ export default function AboutPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <a
-              href="#"
+              href={socialLinks.youtube}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white font-semibold px-6 py-3 rounded transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
               </svg>
               Listen Now
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Books Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-black mb-8 text-center">Brandon's Books</h2>
+          <div className="grid md:grid-cols-2 gap-8">
+            <a
+              href={socialLinks.amazon1}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-gray-50 hover:bg-gray-100 p-6 rounded-xl transition-colors block"
+            >
+              <div className="flex items-start gap-4">
+                <div className="bg-pink-200 w-16 h-20 rounded flex items-center justify-center flex-shrink-0">
+                  <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-black mb-1">Message to the Businessman</h3>
+                  <p className="text-gray-500 text-sm mb-2">by Brandon Bee Dixon</p>
+                  <span className="text-red-700 text-sm font-medium inline-flex items-center gap-1">
+                    View on Amazon
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </a>
+            <a
+              href={socialLinks.amazon2}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-gray-50 hover:bg-gray-100 p-6 rounded-xl transition-colors block"
+            >
+              <div className="flex items-start gap-4">
+                <div className="bg-pink-200 w-16 h-20 rounded flex items-center justify-center flex-shrink-0">
+                  <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-black mb-1">Sales: The Nucleus of Any Profession</h3>
+                  <p className="text-gray-500 text-sm mb-2">by Brandon Bee Dixon</p>
+                  <span className="text-red-700 text-sm font-medium inline-flex items-center gap-1">
+                    View on Amazon
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
             </a>
           </div>
         </div>
