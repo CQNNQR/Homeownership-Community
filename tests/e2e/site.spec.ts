@@ -293,16 +293,17 @@ test.describe('Resources Page', () => {
     await expect(page).toHaveURL('/resources');
   });
 
-  test('should display guide cards with download buttons', async ({ page }) => {
+  test('should display free guides with subscribe buttons', async ({ page }) => {
     await page.goto('/resources');
-    await expect(page.locator('text=Real Estate Investment FAQ').first()).toBeVisible();
-    await expect(page.locator('text=Reverse Mortgage Guide').first()).toBeVisible();
+    await expect(page.locator('h2:has-text("Free Guides")')).toBeVisible();
+    await expect(page.locator('text=Subscribe for Free Access').first()).toBeVisible();
   });
 
-  test('should have download PDF buttons', async ({ page }) => {
+  test('should display premium guide with purchase option', async ({ page }) => {
     await page.goto('/resources');
-    const downloadButton = page.locator('a:has-text("Download Free PDF")').first();
-    await expect(downloadButton).toBeVisible();
+    await expect(page.locator('h2:has-text("Premium Guide")')).toBeVisible();
+    await expect(page.locator('h3:has-text("Reverse Mortgage Guide")')).toBeVisible();
+    await expect(page.locator('button:has-text("Purchase Now")')).toBeVisible();
   });
 
   test('should have contact section', async ({ page }) => {

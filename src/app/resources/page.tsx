@@ -8,7 +8,7 @@ const freeGuides = [
   {
     title: 'HOC Real Estate Investment FAQ',
     description: 'The Homeownership Community guide to real estate investment frequently asked questions.',
-    category: 'Free Guide',
+    category: 'Free with Subscription',
     file: '/guides/hoc-rei-faq.pdf',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -19,7 +19,7 @@ const freeGuides = [
   {
     title: 'Real Estate Investment FAQ',
     description: 'Frequently asked questions about real estate investing, property ownership, and building wealth through real estate.',
-    category: 'Free Guide',
+    category: 'Free with Subscription',
     file: '/guides/REI FAQ BrandonBeeDixon.pdf',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,19 +29,22 @@ const freeGuides = [
   },
 ]
 
-const lockedGuide = {
+const premiumGuide = {
   title: 'Reverse Mortgage Guide',
-  description: 'Comprehensive guide to reverse mortgages, how they work, pros and cons, and whether they might be right for you.',
-  category: 'Member Exclusive',
+  description: 'Comprehensive guide to reverse mortgages, how they work, pros and cons, and whether they might be right for you. Get the complete breakdown from a mortgage expert.',
+  category: 'Premium Guide',
+  price: '$99',
   icon: (
     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
 }
 
 export default function ResourcesPage() {
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false)
   const [showJoinModal, setShowJoinModal] = useState(false)
+  const [subscribeEmail, setSubscribeEmail] = useState('')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -49,9 +52,16 @@ export default function ResourcesPage() {
     phone: '',
   })
 
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault()
+    alert('Thank you for subscribing! Check your email for the free guides.')
+    setShowSubscribeModal(false)
+    setSubscribeEmail('')
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Thank you for joining! Check your email for the exclusive guide.')
+    alert('Thank you for your purchase! The Reverse Mortgage Guide will be sent to your email.')
     setShowJoinModal(false)
     setFormData({ firstName: '', lastName: '', email: '', phone: '' })
   }
@@ -70,11 +80,11 @@ export default function ResourcesPage() {
         </div>
       </section>
 
-      {/* Free Guides Section */}
+      {/* Free Guides Section - Requires Subscription */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-black mb-2">Free Downloads</h2>
-          <p className="text-gray-600 mb-8">Download these guides instantly, no signup required.</p>
+          <h2 className="text-2xl font-bold text-black mb-2">Free Guides</h2>
+          <p className="text-gray-600 mb-8">Subscribe to get instant access to these free guides.</p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8">
             {freeGuides.map((guide, index) => (
@@ -88,24 +98,22 @@ export default function ResourcesPage() {
                       {guide.icon}
                     </div>
                   </div>
-                  <span className="bg-green-100 text-green-700 text-xs font-medium px-3 py-1 rounded-full">
+                  <span className="bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">
                     {guide.category}
                   </span>
                   <h3 className="text-xl font-bold text-black mt-4 mb-2">{guide.title}</h3>
                   <p className="text-gray-600 text-sm mb-4">{guide.description}</p>
                 </div>
                 <div className="px-6 pb-6">
-                  <a
-                    href={guide.file}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => setShowSubscribeModal(true)}
                     className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-3 rounded transition-colors flex items-center justify-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    Download Free PDF
-                  </a>
+                    Subscribe for Free Access
+                  </button>
                 </div>
               </div>
             ))}
@@ -113,25 +121,31 @@ export default function ResourcesPage() {
         </div>
       </section>
 
-      {/* Member Exclusive Section */}
+      {/* Premium Guide Section - $99 */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-black mb-2">Member Exclusive</h2>
-          <p className="text-gray-600 mb-8">Join the community to unlock premium guides and resources.</p>
+          <h2 className="text-2xl font-bold text-black mb-2">Premium Guide</h2>
+          <p className="text-gray-600 mb-8">Get exclusive access to in-depth analysis and expert insights.</p>
 
           <div className="max-w-md">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-lg border-2 border-red-700 overflow-hidden">
+              <div className="bg-red-700 text-white text-center py-2">
+                <span className="font-bold">Premium Content</span>
+              </div>
               <div className="p-6">
                 <div className="bg-gray-100 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
                   <div className="text-gray-600">
-                    {lockedGuide.icon}
+                    {premiumGuide.icon}
                   </div>
                 </div>
-                <span className="bg-red-700 text-white text-xs font-medium px-3 py-1 rounded-full">
-                  {lockedGuide.category}
+                <span className="bg-red-100 text-red-700 text-xs font-medium px-3 py-1 rounded-full">
+                  {premiumGuide.category}
                 </span>
-                <h3 className="text-xl font-bold text-black mt-4 mb-2">{lockedGuide.title}</h3>
-                <p className="text-gray-600 text-sm mb-4">{lockedGuide.description}</p>
+                <h3 className="text-xl font-bold text-black mt-4 mb-2">{premiumGuide.title}</h3>
+                <p className="text-gray-600 text-sm mb-4">{premiumGuide.description}</p>
+                <div className="text-center mb-6">
+                  <span className="text-4xl font-bold text-black">{premiumGuide.price}</span>
+                </div>
               </div>
               <div className="px-6 pb-6">
                 <button
@@ -139,12 +153,12 @@ export default function ResourcesPage() {
                   className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-3 rounded transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  Join to Download
+                  Purchase Now - $99
                 </button>
                 <p className="text-gray-400 text-xs text-center mt-3">
-                  Free to join. Get instant access.
+                  Instant digital delivery
                 </p>
               </div>
             </div>
@@ -152,7 +166,49 @@ export default function ResourcesPage() {
         </div>
       </section>
 
-      {/* Join Modal */}
+      {/* Subscribe Modal */}
+      {showSubscribeModal && (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-8 sm:pt-[10vh] overflow-y-auto">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowSubscribeModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl my-auto">
+            <button
+              onClick={() => setShowSubscribeModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h3 className="text-2xl font-bold text-black mb-2">Get Free Guides</h3>
+            <p className="text-gray-600 mb-4">Subscribe to get instant access to our free investment guides.</p>
+            <form onSubmit={handleSubscribe} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={subscribeEmail}
+                  onChange={(e) => setSubscribeEmail(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                  placeholder="john@example.com"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2"
+              >
+                Get Free Access
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Purchase Modal */}
       {showJoinModal && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-8 sm:pt-[10vh] overflow-y-auto">
           <div
@@ -169,9 +225,9 @@ export default function ResourcesPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h3 className="text-2xl font-bold text-black mb-2">Join the Community</h3>
-            <p className="text-gray-600 mb-4">Fill out the form below and we&apos;ll send you the exclusive guide instantly.</p>
-            <p className="text-red-700 font-semibold mb-6">Get free access to the Reverse Mortgage Guide!</p>
+            <h3 className="text-2xl font-bold text-black mb-2">Purchase Reverse Mortgage Guide</h3>
+            <p className="text-gray-600 mb-2">Get instant access to the complete guide for $99.</p>
+            <p className="text-red-700 font-bold text-lg mb-6">Total: $99</p>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -220,9 +276,9 @@ export default function ResourcesPage() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2"
+                className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2"
               >
-                Get Instant Access
+                Complete Purchase - $99
               </button>
             </form>
           </div>
