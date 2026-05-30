@@ -146,11 +146,17 @@ export default async function BlogPostPage({ params }: Props) {
                   className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block border border-gray-100"
                 >
                   <div className="h-40 bg-gray-200 relative">
-                    {relatedPost.image && (
+                    {relatedPost.image ? (
                       <img
                         src={relatedPost.image}
                         alt={relatedPost.imageAlt}
                         className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src="/LOGO/15002.png"
+                        alt="Home Ownership Community"
+                        className="w-full h-full object-contain bg-gray-50"
                       />
                     )}
                   </div>
