@@ -3,20 +3,20 @@ import Footer from '@/components/Footer'
 
 const books = [
   {
-    title: 'The Future Landlord Playbook',
-    author: 'The Homeownership Community',
-    description: 'Your comprehensive guide to becoming a successful landlord. From finding your first property to managing tenants and scaling your portfolio, this book covers everything you need to know.',
-    topics: ['Landlord basics', 'Tenant management', 'Financial planning', 'Legal compliance', 'Scaling your portfolio'],
+    title: 'Message to the Businessman',
+    author: 'Brandon Bee Dixon',
+    description: 'An insightful guide that addresses the fundamental principles of business success and personal development. Brandon shares his wisdom on entrepreneurship, sales mastery, and the mindset required to thrive in today\'s competitive marketplace.',
+    topics: ['Entrepreneurship', 'Sales Strategy', 'Business Leadership', 'Personal Development', 'Success Principles'],
     price: 'Available on Amazon',
-    amazonUrl: '#',
+    amazonUrl: 'https://a.co/d/09f8MkL3',
   },
   {
-    title: 'Investing in High-End Real Estate',
-    author: 'The Homeownership Community',
-    description: 'Master the luxury real estate market with this in-depth guide. Learn how to identify premium properties, understand high-net-worth tenants, and maximize returns in the exclusive property segment.',
-    topics: ['Market analysis', 'Luxury property evaluation', 'Premium tenant screening', 'High-end property management', 'Investment strategies'],
+    title: 'Sales: The Nucleus of Any Profession',
+    author: 'Brandon Bee Dixon',
+    description: 'Discover why sales is the foundation of every successful business and career. This comprehensive guide reveals proven techniques for closing deals, building relationships, and understanding customer needs that drive revenue growth.',
+    topics: ['Sales Techniques', 'Customer Relations', 'Closing Strategies', 'Revenue Growth', 'Professional Development'],
     price: 'Available on Amazon',
-    amazonUrl: '#',
+    amazonUrl: 'https://a.co/d/0bXRCoq6',
   },
 ]
 
@@ -54,9 +54,9 @@ export default function BooksPage() {
           <div className="inline-block bg-red-700 text-white text-xs font-bold px-4 py-2 mb-6">
             I Create Owners
           </div>
-          <h1 className="text-4xl font-bold text-black mb-4">Master Real Estate Investing & Wealth Building</h1>
+          <h1 className="text-4xl font-bold text-black mb-4">Books by Brandon Bee Dixon</h1>
           <p className="text-gray-600 max-w-2xl">
-            Take your knowledge to the next level with our comprehensive guides on property ownership, real estate investing strategies, and building generational wealth. Learn from expert insights designed to help you achieve financial freedom through ownership.
+            Learn from Brandon's expertise through his published works. These books cover essential topics in sales, business leadership, and personal development to help you achieve success.
           </p>
         </div>
       </section>
@@ -101,6 +101,8 @@ export default function BooksPage() {
                       <div className="flex items-center gap-4">
                         <a
                           href={book.amazonUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="bg-red-700 hover:bg-red-800 text-white font-semibold px-6 py-3 rounded transition-colors inline-flex items-center gap-2"
                         >
                           Get on Amazon

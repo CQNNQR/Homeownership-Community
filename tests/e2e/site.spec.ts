@@ -315,7 +315,7 @@ test.describe('Resources Page', () => {
 test.describe('Books Page', () => {
   test('should load books page', async ({ page }) => {
     await page.goto('/books');
-    await expect(page.locator('h1:has-text("Master Real Estate Investing")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Books by Brandon Bee Dixon")')).toBeVisible();
   });
 
   test('should navigate to books from nav', async ({ page }) => {
@@ -326,15 +326,14 @@ test.describe('Books Page', () => {
 
   test('should display book listings', async ({ page }) => {
     await page.goto('/books');
-    await expect(page.locator('h1:has-text("Master Real Estate Investing")')).toBeVisible();
-    await expect(page.locator('p:has-text("The Future Landlord Playbook")')).toBeVisible();
-    await expect(page.locator('p:has-text("Investing in High-End Real Estate")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Books by Brandon Bee Dixon")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Message to the Businessman")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Sales: The Nucleus of Any Profession")')).toBeVisible();
   });
 
   test('should click Get on Amazon button', async ({ page }) => {
     await page.goto('/books');
     const amazonButton = page.locator('a:has-text("Get on Amazon")').first();
-    // href is currently "#", but button should be clickable
     await expect(amazonButton).toBeVisible();
   });
 
