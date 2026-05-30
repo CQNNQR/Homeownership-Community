@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { getPostsFromRSS } from '@/lib/wordpress'
+import { getPosts } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
 
 interface Post {
@@ -28,15 +28,11 @@ export default function BlogPage() {
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+  const [hasInitialized, setHasInitialized] = useState(false)
 
-  useEffect(() => {
-    fetchPosts(1)
-  }, [])
-
-  async function fetchPosts(page: number) {
+  const fetchPosts = useCallback(async (page: number) => {
     try {
-      const result = await getPostsFromRSS(page, POSTS_PER_PAGE)
-
+      const result = await getPosts(page, POSTS_PER_PAGE)
       const normalizedPosts = result.posts.map(normalizePost)
 
       if (page > 1) {
@@ -44,20 +40,35 @@ export default function BlogPage() {
       } else {
         setPosts(normalizedPosts)
       }
-      setHasMore(result.hasMore)
+      setHasMore(result.pageInfo.totalPages > page)
       setCurrentPage(page)
-      setLoading(false)
+      setError(null)
     } catch (err) {
       setError('Unable to load blog posts. Please try again later.')
+    } finally {
       setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hasInitialized) {
+      setHasInitialized(true)
+      fetchPosts(1)
+    }
+  }, [hasInitialized, fetchPosts])
+
+  function loadMore() {
+    if (hasMore && !loadingMore) {
+      setLoadingMore(true)
+      fetchPosts(currentPage + 1)
     }
   }
 
-  async function loadMore() {
-    if (!hasMore || loadingMore) return
-    setLoadingMore(true)
-    await fetchPosts(currentPage + 1)
-    setLoadingMore(false)
+  function retry() {
+    setLoading(true)
+    setError(null)
+    fetchPosts(1)
   }
 
   return (
@@ -95,7 +106,7 @@ export default function BlogPage() {
             <div className="text-center py-16">
               <p className="text-gray-600 mb-4">{error}</p>
               <button
-                onClick={() => fetchPosts(1)}
+                onClick={retry}
                 className="text-red-700 hover:text-red-800 font-semibold"
               >
                 Try Again

@@ -1,166 +1,112 @@
-import Parser from 'rss-parser';
-
-const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://your-wordpress-site.com';
-const RSS_URL = `${WORDPRESS_URL}/feed/`;
-
-const parser = new Parser({
-  timeout: 10000,
-  headers: {
-    'User-Agent': 'Homeownership-Community/1.0',
-  },
-});
-
-// Custom fields for WordPress RSS
-interface CustomItem {
-  'content:encoded': string;
-  'wp:post_id': string;
-  'wp:post_date': string;
-  'wp:post_name': string;
-  'wp:status': string;
-  'wp:term': Array<Array<{ _attr: { domain: string; nicename: string }; $: { [key: string]: string[] } }>>;
-  'enclosure': { url: string; type: string };
+// WordPress REST API types
+export interface WPRestPost {
+  id: number;
+  slug: string;
+  title: { rendered: string };
+  excerpt: { rendered: string };
+  content: { rendered: string };
+  date: string;
+  modified: string;
+  featured_media: number;
+  categories: number[];
+  author: number;
+  _embedded?: {
+    'wp:featuredmedia'?: Array<{
+      source_url: string;
+      alt_text: string;
+    }>;
+    'wp:term'?: Array<Array<{ name: string }>>;
+    author?: Array<{ name: string }>;
+  };
 }
 
-type WordPressItem = Parser.Item & CustomItem;
+export interface WPRestPageInfo {
+  totalPages: number;
+  currentPage: number;
+}
 
 // Helper to fetch with timeout
-async function fetchWithTimeout(url: string, timeout = 10000): Promise<string> {
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 10000) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
     const response = await fetch(url, {
+      ...options,
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.text();
+    return response;
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
   }
 }
 
-// Fetch and parse RSS feed
-export async function getPostsFromRSS(page = 1, perPage = 10): Promise<{
-  posts: any[];
-  hasMore: boolean;
-  totalPages: number;
+// Fetch posts from WordPress REST API
+export async function getPosts(page = 1, perPage = 10): Promise<{
+  posts: WPRestPost[];
+  pageInfo: WPRestPageInfo;
 }> {
   try {
-    const xml = await fetchWithTimeout(RSS_URL);
-    const feed = await parser.parseString(xml);
+    const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://your-wordpress-site.com';
+    const url = `${WORDPRESS_URL}/wp-json/wp/v2/posts?_embed&page=${page}&per_page=${perPage}&status=publish`;
+    const response = await fetchWithTimeout(url);
 
-    const startIndex = (page - 1) * perPage;
-    const endIndex = startIndex + perPage;
-    const paginatedPosts = feed.items.slice(startIndex, endIndex);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-    const posts = paginatedPosts.map((item) => {
-      // Extract featured image from enclosure or content
-      let featuredImage = null;
-      if ((item as any).enclosure?.url) {
-        featuredImage = (item as any).enclosure.url;
-      } else {
-        // Try to extract image from content
-        const contentMatch = (item as any)['content:encoded']?.match(/<img[^>]+src="([^">]+)"/);
-        if (contentMatch) {
-          featuredImage = contentMatch[1];
-        }
-      }
-
-      // Extract categories
-      const categories = (item as any)['wp:term']?.find(
-        (term: any) => term._attr?.domain === 'category'
-      );
-      const category = categories?.$[0]?.['wp:term']?.[0] || 'General';
-
-      // Extract slug from link
-      const slug = (item as any)['wp:post_name'] || item.link?.split('/').pop() || '';
-
-      return {
-        id: (item as any)['wp:post_id'] || item.guid || item.link,
-        title: item.title || 'Untitled',
-        slug: slug,
-        excerpt: item.contentSnippet?.slice(0, 200) || item.content?.replace(/<[^>]*>/g, '').slice(0, 200) || '',
-        date: item.pubDate || item.isoDate || '',
-        link: item.link,
-        featuredImage,
-        category,
-        content: (item as any)['content:encoded'] || item.content || '',
-        author: item.creator || item.author || 'The Home Ownership Community',
-      };
-    });
+    const posts = await response.json();
+    const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '1', 10);
 
     return {
       posts,
-      hasMore: endIndex < feed.items.length,
-      totalPages: Math.ceil(feed.items.length / perPage),
+      pageInfo: {
+        totalPages,
+        currentPage: page,
+      },
     };
   } catch (error) {
-    console.error('Error fetching RSS feed:', error);
-    return { posts: [], hasMore: false, totalPages: 0 };
+    console.error('Error fetching posts:', error);
+    return { posts: [], pageInfo: { totalPages: 0, currentPage: 1 } };
   }
 }
 
 // Fetch single post by slug
-export async function getPostBySlugFromRSS(slug: string): Promise<any | null> {
+export async function getPostBySlug(slug: string): Promise<WPRestPost | null> {
   try {
-    const xml = await fetchWithTimeout(RSS_URL);
-    const feed = await parser.parseString(xml);
+    const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://your-wordpress-site.com';
+    const url = `${WORDPRESS_URL}/wp-json/wp/v2/posts?slug=${slug}&_embed&status=publish`;
+    const response = await fetchWithTimeout(url);
 
-    const post = feed.items.find((item) => {
-      const itemSlug = (item as any)['wp:post_name'] || item.link?.split('/').pop() || '';
-      return itemSlug === slug;
-    });
-
-    if (!post) return null;
-
-    let featuredImage = null;
-    if ((post as any).enclosure?.url) {
-      featuredImage = (post as any).enclosure.url;
-    } else {
-      const contentMatch = (post as any)['content:encoded']?.match(/<img[^>]+src="([^">]+)"/);
-      if (contentMatch) {
-        featuredImage = contentMatch[1];
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const categories = (post as any)['wp:term']?.find(
-      (term: any) => term._attr?.domain === 'category'
-    );
-    const category = categories?.$[0]?.['wp:term']?.[0] || 'General';
-
-    return {
-      id: (post as any)['wp:post_id'] || post.guid || post.link,
-      title: post.title || 'Untitled',
-      slug: (post as any)['wp:post_name'] || post.link?.split('/').pop() || '',
-      excerpt: post.contentSnippet?.slice(0, 200) || post.content?.replace(/<[^>]*>/g, '').slice(0, 200) || '',
-      date: post.pubDate || post.isoDate || '',
-      link: post.link,
-      featuredImage,
-      category,
-      content: (post as any)['content:encoded'] || post.content || '',
-      author: post.creator || post.author || 'The Home Ownership Community',
-    };
+    const posts: WPRestPost[] = await response.json();
+    return posts.length > 0 ? posts[0] : null;
   } catch (error) {
-    console.error('Error fetching post from RSS:', error);
+    console.error('Error fetching post by slug:', error);
     return null;
   }
 }
 
-// Get all post slugs
-export async function getAllSlugsFromRSS(): Promise<string[]> {
+// Fetch all post slugs (for static generation)
+export async function getAllPostSlugs(): Promise<string[]> {
   try {
-    const xml = await fetchWithTimeout(RSS_URL);
-    const feed = await parser.parseString(xml);
+    const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://your-wordpress-site.com';
+    const url = `${WORDPRESS_URL}/wp-json/wp/v2/posts?per_page=100&fields=slug&status=publish`;
+    const response = await fetchWithTimeout(url);
 
-    return feed.items.map((item) => {
-      return (item as any)['wp:post_name'] || item.link?.split('/').pop() || '';
-    }).filter(Boolean);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const posts: Array<{ slug: string }> = await response.json();
+    return posts.map((post) => post.slug);
   } catch (error) {
-    console.error('Error fetching slugs from RSS:', error);
+    console.error('Error fetching post slugs:', error);
     return [];
   }
 }

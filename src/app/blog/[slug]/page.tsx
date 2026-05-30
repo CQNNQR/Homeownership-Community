@@ -2,8 +2,8 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { getPostBySlugFromRSS, getPostsFromRSS } from '@/lib/wordpress'
-import { normalizePost, getReadingTime, formatDate } from '@/lib/utils'
+import { getPostBySlug, getPosts } from '@/lib/wordpress'
+import { normalizePost } from '@/lib/utils'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -12,7 +12,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   try {
-    const post = await getPostBySlugFromRSS(slug)
+    const post = await getPostBySlug(slug)
 
     if (!post) {
       return { title: 'Post Not Found' }
@@ -41,11 +41,11 @@ export default async function BlogPostPage({ params }: Props) {
   let relatedPosts: any[] = []
 
   try {
-    post = await getPostBySlugFromRSS(slug)
+    post = await getPostBySlug(slug)
 
     if (post) {
       // Fetch related posts (latest posts, excluding current)
-      const { posts: allPosts } = await getPostsFromRSS(1, 4)
+      const { posts: allPosts } = await getPosts(1, 4)
       relatedPosts = allPosts
         .filter((p) => p.slug !== slug)
         .slice(0, 3)
@@ -111,7 +111,7 @@ export default async function BlogPostPage({ params }: Props) {
       <section className="py-16 bg-white">
         <article
           className="max-w-3xl mx-auto px-4 prose prose-lg max-w-none"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ __html: post.content?.rendered || '' }}
         />
       </section>
 
