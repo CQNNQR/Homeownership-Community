@@ -78,6 +78,8 @@ NEXT_PUBLIC_WORDPRESS_URL=https://bdixon7955e29543-dcwxs.wpcomstaging.com
 - [x] Related posts section at bottom of each blog
 - [x] Featured image support from WordPress
 - [x] Reading time calculation
+- [x] HTML entity decoding for proper text display
+- [x] 10-second cache revalidation for fresh content
 
 ### Blog Styling
 - [x] Tailwind Typography plugin for proper content formatting
@@ -95,11 +97,47 @@ NEXT_PUBLIC_WORDPRESS_URL=https://bdixon7955e29543-dcwxs.wpcomstaging.com
 - [x] Falls back to WordPress category if available
 - [x] Default to "General" if no match
 
-### Future Image Enhancements
-- [ ] Auto-generated images based on blog content (AI image generation)
-- [ ] Stock photo integration based on keywords
-- [ ] Category-specific default images with variety
-- [ ] Flyer-style generated images matching blog topics
+---
+
+## SEO & UX Improvements (In Progress)
+
+### Quick Wins Completed
+- [x] Add schema markup (Article, Person, FAQ, BreadcrumbList)
+- [x] Add FAQ section template to blog posts
+- [ ] Unique meta descriptions per page
+- [ ] Fix broken social links (need actual URLs from Brandon)
+- [ ] Add downloadable resources (need actual files from Brandon)
+
+### Pending: Requires Info From Brandon
+
+#### Personal Brand
+- [ ] Brandon Bee Dixon bio (photo, credentials, story)
+- [ ] Author photo upload
+- [ ] Personal brand trust signals for E-E-A-T
+
+#### Social Links
+- [ ] Twitter/X profile URL
+- [ ] LinkedIn profile URL
+- [ ] Instagram profile URL
+
+#### Community & Resources
+- [ ] Community platform link (Discord, Facebook group, etc.)
+- [ ] Actual downloadable resource files (PDFs, spreadsheets, etc.)
+- [ ] Lead magnet / email incentive
+- [ ] Email subscribe confirmation flow
+
+#### Content
+- [ ] 2-3 long-form pillar articles (2,000+ words)
+- [ ] FAQ sections for each blog post (template ready)
+- [ ] New blog posts (current: 6 posts from Oct-Nov 2024)
+
+#### SEO
+- [ ] Unique meta descriptions per page
+- [ ] Article schema per blog post (template ready)
+- [ ] Person schema for Brandon Bee Dixon
+- [ ] BreadcrumbList schema
+- [ ] robots.txt configuration
+- [ ] sitemap.xml generation
 
 ---
 
@@ -184,3 +222,24 @@ Build a fully custom CMS where Brandon can manage all site content without WordP
 - Logo placeholder (`/LOGO/15002.png`) used for posts without featured images
 - Blog auto-categorization works based on content keyword analysis
 - Typography plugin configured with site brand colors
+- Schema markup added for SEO (Article, Person, FAQ, BreadcrumbList)
+
+---
+
+## Info Needed From Brandon (Action Items)
+
+To complete the SEO & UX improvements, Brandon needs to provide:
+
+### High Priority
+1. **Social URLs** - Twitter/X, LinkedIn, Instagram links
+2. **Community Link** - Discord/Facebook group/membership portal URL
+3. **Author Bio** - Photo, credentials, story for "About" page
+4. **Downloadable Resources** - Any PDFs, spreadsheets, guides to link
+
+### Medium Priority
+5. **Lead Magnet** - What incentive for email signup?
+6. **FAQ Content** - Common questions about real estate investing
+
+### Lower Priority (Long-term)
+7. **New Blog Posts** - Consistent publishing schedule
+8. **Pillar Content** - Long-form guides (2,000+ words each)

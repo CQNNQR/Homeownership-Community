@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { getPostBySlug as getPostFromWordPress, getPosts as getPostsFromWordPress } from '@/lib/wordpress'
-import { normalizePost } from '@/lib/utils'
+import { normalizePost, stripHtml } from '@/lib/utils'
 
 // Revalidate every 10 seconds to keep blog fresh
 export const revalidate = 10
@@ -15,7 +15,6 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   try {
-    // Use direct WordPress fetch for server component (no browser blocking)
     const post = await getPostFromWordPress(slug)
 
     if (!post) {
@@ -31,10 +30,141 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: normalizedPost.title,
         description: normalizedPost.excerpt,
         images: normalizedPost.image ? [{ url: normalizedPost.image }] : [],
+        type: 'article',
       },
     }
   } catch {
     return { title: 'Blog Post' }
+  }
+}
+
+// Generate FAQ schema based on post content
+function generateFAQs(title: string, content: string) {
+  const text = stripHtml(content).toLowerCase()
+
+  const faqs: { question: string; answer: string }[] = []
+
+  // Generate relevant FAQs based on keywords in the content
+  if (text.includes('mortgage') || text.includes('loan')) {
+    faqs.push({
+      question: 'How do I get approved for a mortgage?',
+      answer: 'Getting approved for a mortgage typically involves checking your credit score, saving for a down payment, verifying your income, and working with a lender. Contact a mortgage professional for personalized guidance.',
+    })
+  }
+
+  if (text.includes('investing') || text.includes('rental')) {
+    faqs.push({
+      question: 'Is real estate a good investment?',
+      answer: 'Real estate can be an excellent investment for building wealth through rental income, property appreciation, and tax benefits. Research local markets and work with experienced professionals.',
+    })
+  }
+
+  if (text.includes('landlord') || text.includes('tenant')) {
+    faqs.push({
+      question: 'What are the responsibilities of a landlord?',
+      answer: 'Landlord responsibilities include maintaining the property, handling repairs, screening tenants, collecting rent, and complying with local landlord-tenant laws.',
+    })
+  }
+
+  if (text.includes('buy') || text.includes('purchase')) {
+    faqs.push({
+      question: 'What should I know before buying my first property?',
+      answer: 'Before buying, understand your budget, get pre-approved for financing, research neighborhoods, factor in hidden costs (taxes, insurance, maintenance), and work with a real estate professional.',
+    })
+  }
+
+  // Default FAQs if no specific keywords found
+  if (faqs.length === 0) {
+    faqs.push({
+      question: 'How can I learn more about real estate investing?',
+      answer: 'Join The Home Ownership Community for expert insights on real estate investing, property ownership, and building generational wealth.',
+    })
+    faqs.push({
+      question: 'What is "We Create Owners"?',
+      answer: '"We Create Owners" is the mission of The Home Ownership Community - empowering individuals to become homeowners and real estate investors.',
+    })
+  }
+
+  return faqs
+}
+
+// Generate JSON-LD schema for the post
+function generateArticleSchema(post: any, normalizedPost: any) {
+  const siteUrl = 'https://homeownership-community.vercel.app'
+  const articleUrl = `${siteUrl}/blog/${post.slug}`
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: normalizedPost.title,
+    description: normalizedPost.excerpt,
+    image: normalizedPost.image || `${siteUrl}/LOGO/15002.png`,
+    datePublished: post.date,
+    dateModified: post.modified || post.date,
+    author: {
+      '@type': 'Person',
+      name: 'Brandon Bee Dixon',
+      description: 'Real estate investor and founder of The Home Ownership Community',
+      url: siteUrl,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'The Home Ownership Community',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${siteUrl}/LOGO/15002.png`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': articleUrl,
+    },
+    keywords: normalizedPost.category,
+    wordCount: stripHtml(post.content?.rendered || '').split(/\s+/).length,
+  }
+}
+
+function generateBreadcrumbSchema(post: any) {
+  const siteUrl = 'https://homeownership-community.vercel.app'
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: siteUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Blog',
+        item: `${siteUrl}/blog`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: post.title,
+        item: `${siteUrl}/blog/${post.slug}`,
+      },
+    ],
+  }
+}
+
+function generateFAQSchema(faqs: { question: string; answer: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
   }
 }
 
@@ -45,7 +175,6 @@ export default async function BlogPostPage({ params }: Props) {
   let relatedPosts: any[] = []
 
   try {
-    // Use direct WordPress fetch for server component
     post = await getPostFromWordPress(slug)
 
     if (post) {
@@ -77,10 +206,21 @@ export default async function BlogPostPage({ params }: Props) {
   }
 
   const normalizedPost = normalizePost(post)
+  const faqs = generateFAQs(normalizedPost.title, post.content?.rendered || '')
+
+  const articleSchema = generateArticleSchema(post, normalizedPost)
+  const breadcrumbSchema = generateBreadcrumbSchema(post)
+  const faqSchema = generateFAQSchema(faqs)
 
   return (
     <div className="min-h-screen bg-white">
       <Navigation />
+
+      {/* JSON-LD Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([articleSchema, breadcrumbSchema, faqSchema]) }}
+      />
 
       {/* Article Hero */}
       <section className="pt-32 pb-12 bg-[#F9F9F9]">
@@ -119,18 +259,31 @@ export default async function BlogPostPage({ params }: Props) {
         />
       </section>
 
-      {/* Author Box */}
+      {/* FAQ Section */}
       <section className="py-12 bg-[#F9F9F9]">
         <div className="max-w-3xl mx-auto px-4">
-          <div className="flex items-center gap-6 p-6 bg-white rounded-xl shadow-sm">
+          <h2 className="text-2xl font-bold text-black mb-8 text-center">Frequently Asked Questions</h2>
+          <div className="space-y-6">
+            {faqs.map((faq, index) => (
+              <div key={index} className="bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-black mb-2">{faq.question}</h3>
+                <p className="text-gray-600">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Author Box */}
+      <section className="py-12 bg-white">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="flex items-center gap-6 p-6 bg-[#F9F9F9] rounded-xl shadow-sm">
             <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
-              <span className="text-gray-500 font-bold text-xl">
-                {normalizedPost.author.charAt(0)}
-              </span>
+              <span className="text-gray-500 font-bold text-xl">B</span>
             </div>
             <div>
-              <p className="font-bold text-black">{normalizedPost.author}</p>
-              <p className="text-gray-600 text-sm">The Home Ownership Community</p>
+              <p className="font-bold text-black">Brandon Bee Dixon</p>
+              <p className="text-gray-600 text-sm">Founder of The Home Ownership Community</p>
             </div>
           </div>
         </div>
