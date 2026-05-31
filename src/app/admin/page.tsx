@@ -770,7 +770,7 @@ function BlogManager() {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([])
   const [selectAll, setSelectAll] = useState(false)
 
   useEffect(() => {
