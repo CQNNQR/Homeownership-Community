@@ -14,6 +14,26 @@ export default function Navigation() {
     email: '',
     phone: '',
   })
+  const [theme, setTheme] = useState({
+    primary_color: '#A61C30',
+    header_bg: '#FFFFFF',
+    header_text: '#000000',
+  })
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setTheme({
+            primary_color: data.theme_primary_color || '#A61C30',
+            header_bg: data.theme_header_bg || '#FFFFFF',
+            header_text: data.theme_header_text || '#000000',
+          })
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,21 +120,22 @@ export default function Navigation() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-gray-200/50" style={{ backgroundColor: `${theme.header_bg}E6` }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <Link href="/" className="flex items-center gap-1">
-              <span className="text-xl font-bold text-black tracking-tight">THE HOME</span>
-              <span className="text-xl font-bold text-gray-500 tracking-tight">OWNERSHIP COMMUNITY</span>
+              <span className="text-xl font-bold tracking-tight" style={{ color: theme.header_text }}>THE HOME</span>
+              <span className="text-xl font-bold tracking-tight" style={{ color: `${theme.header_text}99` }}>OWNERSHIP COMMUNITY</span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/blog" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Blog</Link>
-              <Link href="/about" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">About</Link>
-              <Link href="/resources" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Resources</Link>
-              <Link href="/books" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Books</Link>
+              <Link href="/blog" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>Blog</Link>
+              <Link href="/about" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>About</Link>
+              <Link href="/resources" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>Resources</Link>
+              <Link href="/books" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>Books</Link>
               <button
                 onClick={() => setShowModal(true)}
-                className="bg-red-700 hover:bg-red-800 text-white font-semibold px-6 py-3 rounded text-sm transition-colors"
+                className="font-semibold px-6 py-3 rounded text-sm transition-colors"
+                style={{ backgroundColor: theme.primary_color, color: '#FFFFFF' }}
               >
                 Join the Community
               </button>
@@ -122,6 +143,7 @@ export default function Navigation() {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2"
+              style={{ color: theme.header_text }}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {mobileMenuOpen ? (
@@ -136,13 +158,14 @@ export default function Navigation() {
           {mobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-gray-200">
               <div className="flex flex-col gap-4">
-                <Link href="/blog" className="text-gray-600 hover:text-black transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Blog</Link>
-                <Link href="/about" className="text-gray-600 hover:text-black transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>About</Link>
-                <Link href="/resources" className="text-gray-600 hover:text-black transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Resources</Link>
-                <Link href="/books" className="text-gray-600 hover:text-black transition-colors text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Books</Link>
+                <Link href="/blog" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
+                <Link href="/about" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>About</Link>
+                <Link href="/resources" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>Resources</Link>
+                <Link href="/books" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>Books</Link>
                 <button
                   onClick={() => { setShowModal(true); setMobileMenuOpen(false); }}
-                  className="bg-red-700 hover:bg-red-800 text-white font-semibold px-6 py-3 rounded text-sm transition-colors w-fit"
+                  className="font-semibold px-6 py-3 rounded text-sm transition-colors w-fit"
+                  style={{ backgroundColor: theme.primary_color, color: '#FFFFFF' }}
                 >
                   Join the Community
                 </button>
