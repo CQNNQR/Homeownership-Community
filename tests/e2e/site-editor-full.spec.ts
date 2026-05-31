@@ -781,7 +781,7 @@ test.describe('Site Editor - Full Test Suite', () => {
 
   // ===== LOGOUT =====
   test.describe('Logout', () => {
-    test('should logout successfully', async ({ page }) => {
+    test('should logout successfully and redirect to homepage', async ({ page }) => {
       await page.goto(`${getBaseUrl()}/admin/login`)
       await page.fill('input[type="email"]', ADMIN_EMAIL)
       await page.fill('input[type="password"]', ADMIN_PASSWORD)
@@ -789,9 +789,11 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.waitForURL('**/admin', { timeout: 30000 })
 
       await page.click('button:has-text("Logout")')
-      await page.waitForURL('**/admin/login', { timeout: 10000 })
+      await page.waitForURL(getBaseUrl() + '/', { timeout: 10000 })
 
-      await expect(page.locator('h1')).toContainText('Site Editor Login')
+      // Should be on homepage
+      await expect(page.locator('nav')).toBeVisible()
+      await expect(page.locator('text=Welcome to the Ownership Movement')).toBeVisible()
     })
   })
 })
