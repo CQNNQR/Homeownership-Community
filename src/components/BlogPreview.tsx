@@ -16,7 +16,7 @@ async function getLatestPosts() {
     const visibleSet = new Set(visibleIds)
 
     // Filter to only visible posts
-    return normalizedPosts.filter(post => visibleSet.has(post.id)).slice(0, 3)
+    return normalizedPosts.filter(post => visibleSet.has(String(post.id))).slice(0, 3)
   } catch (err) {
     return []
   }
