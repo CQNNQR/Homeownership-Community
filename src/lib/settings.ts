@@ -70,7 +70,7 @@ export async function getPodcastEpisodes() {
 }
 
 // Get visible blog post IDs from our visibility table
-export async function getVisibleBlogPostIds(): Promise<number[]> {
+export async function getVisibleBlogPostIds(): Promise<string[]> {
   if (!supabaseUrl || !supabaseKey) {
     return []
   }
@@ -87,5 +87,5 @@ export async function getVisibleBlogPostIds(): Promise<number[]> {
     return []
   }
 
-  return data?.map(row => row.wordpress_id) || []
+  return data?.map(row => String(row.wordpress_id)) || []
 }
