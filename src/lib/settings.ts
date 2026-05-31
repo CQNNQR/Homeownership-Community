@@ -1,10 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 export async function getSettings() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn('Supabase not configured, returning empty settings')
+    return {}
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
   const { data, error } = await supabase
     .from('site_settings')
@@ -24,10 +29,11 @@ export async function getSettings() {
 }
 
 export async function getTestimonials() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  if (!supabaseUrl || !supabaseKey) {
+    return []
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
   const { data, error } = await supabase
     .from('testimonials')
@@ -43,10 +49,11 @@ export async function getTestimonials() {
 }
 
 export async function getPodcastEpisodes() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  if (!supabaseUrl || !supabaseKey) {
+    return []
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
   const { data, error } = await supabase
     .from('podcast_episodes')
