@@ -1,14 +1,22 @@
 import Link from 'next/link'
 import { getPosts } from '@/lib/wordpress'
 import { normalizePost } from '@/lib/utils'
+import { getVisibleBlogPostIds } from '@/lib/settings'
 
 // Revalidate every 10 seconds to keep blog fresh
 export const revalidate = 10
 
 async function getLatestPosts() {
   try {
-    const { posts } = await getPosts(1, 3)
-    return posts.map(normalizePost)
+    const { posts } = await getPosts(1, 10)
+    const normalizedPosts = posts.map(normalizePost)
+
+    // Get visible post IDs
+    const visibleIds = await getVisibleBlogPostIds()
+    const visibleSet = new Set(visibleIds)
+
+    // Filter to only visible posts
+    return normalizedPosts.filter(post => visibleSet.has(post.id)).slice(0, 3)
   } catch (err) {
     return []
   }

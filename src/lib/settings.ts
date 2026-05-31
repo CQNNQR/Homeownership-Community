@@ -58,6 +58,7 @@ export async function getPodcastEpisodes() {
   const { data, error } = await supabase
     .from('podcast_episodes')
     .select('*')
+    .eq('is_visible', true)
     .order('episode_number', { ascending: true })
 
   if (error) {
@@ -66,4 +67,25 @@ export async function getPodcastEpisodes() {
   }
 
   return data || []
+}
+
+// Get visible blog post IDs from our visibility table
+export async function getVisibleBlogPostIds(): Promise<number[]> {
+  if (!supabaseUrl || !supabaseKey) {
+    return []
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey)
+
+  const { data, error } = await supabase
+    .from('blog_post_visibility')
+    .select('wordpress_id')
+    .eq('is_visible', true)
+
+  if (error) {
+    console.error('Error fetching visible blog posts:', error)
+    return []
+  }
+
+  return data?.map(row => row.wordpress_id) || []
 }

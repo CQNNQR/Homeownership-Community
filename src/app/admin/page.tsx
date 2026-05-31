@@ -778,31 +778,52 @@ function BlogManager() {
   }, [])
 
   const fetchPosts = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data } = await supabase
-      .from('blog_posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setPosts(data || [])
+    try {
+      const response = await fetch('/api/blog-visibility')
+      const data = await response.json()
+      setPosts(data || [])
+    } catch (err) {
+      console.error('Error fetching posts:', err)
+    }
     setLoading(false)
   }
 
-  const toggleVisibility = async (id: string) => {
-    const post = posts.find(p => p.id === id)
-    await fetch('/api/blog-posts', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, is_published: !post.is_published }),
-    })
-    fetchPosts()
+  const syncPosts = async () => {
+    if (!confirm('Sync posts from WordPress? This will add any new posts to the visibility list.')) return
+    try {
+      await fetch('/api/blog-visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync' }),
+      })
+      fetchPosts()
+      alert('Posts synced from WordPress!')
+    } catch (err) {
+      console.error('Error syncing posts:', err)
+    }
   }
 
-  const toggleSelect = (id: string) => {
+  const toggleVisibility = async (post: any) => {
+    try {
+      await fetch('/api/blog-visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle',
+          wordpress_id: post.wordpress_id,
+          slug: post.slug,
+          title: post.title,
+        }),
+      })
+      fetchPosts()
+    } catch (err) {
+      console.error('Error toggling visibility:', err)
+    }
+  }
+
+  const toggleSelect = (wordpressId: number) => {
     setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      prev.includes(wordpressId) ? prev.filter(i => i !== wordpressId) : [...prev, wordpressId]
     )
   }
 
@@ -810,19 +831,27 @@ function BlogManager() {
     if (selectAll) {
       setSelectedIds([])
     } else {
-      setSelectedIds(filteredPosts.map(p => p.id))
+      setSelectedIds(filteredPosts.map(p => p.wordpress_id))
     }
     setSelectAll(!selectAll)
   }
 
   const bulkHide = async () => {
     if (!confirm(`Hide ${selectedIds.length} selected posts?`)) return
-    for (const id of selectedIds) {
-      await fetch('/api/blog-posts', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, is_published: false }),
-      })
+    for (const wpId of selectedIds) {
+      const post = posts.find(p => p.wordpress_id === wpId)
+      if (post) {
+        await fetch('/api/blog-visibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'toggle',
+            wordpress_id: post.wordpress_id,
+            slug: post.slug,
+            title: post.title,
+          }),
+        })
+      }
     }
     setSelectedIds([])
     setSelectAll(false)
@@ -832,12 +861,20 @@ function BlogManager() {
 
   const bulkShow = async () => {
     if (!confirm(`Show ${selectedIds.length} selected posts?`)) return
-    for (const id of selectedIds) {
-      await fetch('/api/blog-posts', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, is_published: true }),
-      })
+    for (const wpId of selectedIds) {
+      const post = posts.find(p => p.wordpress_id === wpId)
+      if (post) {
+        await fetch('/api/blog-visibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'toggle',
+            wordpress_id: post.wordpress_id,
+            slug: post.slug,
+            title: post.title,
+          }),
+        })
+      }
     }
     setSelectedIds([])
     setSelectAll(false)
@@ -845,13 +882,13 @@ function BlogManager() {
     alert('Selected posts shown!')
   }
 
-  const categories = ['General', 'Mortgage', 'Investing', 'Real Estate', 'Landlord', 'Taxes', 'Insurance', 'Maintenance']
+  const categories = [...new Set(posts.map(p => p.category).filter(Boolean))]
   const filteredPosts = posts.filter(p =>
     p.title.toLowerCase().includes(search.toLowerCase()) ||
     (p.category && p.category.toLowerCase().includes(search.toLowerCase()))
   )
 
-  const visibleCount = posts.filter(p => p.is_published).length
+  const visibleCount = posts.filter(p => p.is_visible).length
 
   if (loading) return <div className="text-center py-8">Loading...</div>
 
@@ -859,7 +896,15 @@ function BlogManager() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-lg font-bold text-black">Blog Visibility</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-black">Blog Visibility</h2>
+            <button
+              onClick={syncPosts}
+              className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3 py-1 rounded-lg text-xs transition-colors"
+            >
+              Sync from WordPress
+            </button>
+          </div>
           <p className="text-sm text-gray-500">{visibleCount} of {posts.length} posts visible on site</p>
         </div>
         {selectedIds.length > 0 && (
@@ -910,28 +955,27 @@ function BlogManager() {
           <p className="text-gray-500 text-center py-8">No posts found</p>
         )}
         {filteredPosts.map((post) => (
-          <div key={post.id} className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4">
+          <div key={post.wordpress_id} className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4">
             <input
               type="checkbox"
-              checked={selectedIds.includes(post.id)}
-              onChange={() => toggleSelect(post.id)}
+              checked={selectedIds.includes(post.wordpress_id)}
+              onChange={() => toggleSelect(post.wordpress_id)}
               className="w-4 h-4 text-red-700 rounded"
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${post.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {post.is_published ? 'Visible' : 'Hidden'}
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${post.is_visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {post.is_visible ? 'Visible' : 'Hidden'}
                 </span>
                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{post.category}</span>
-                {post.is_featured && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Featured</span>}
               </div>
-              <p className="font-medium text-black truncate">{post.title}</p>
+              <p className="font-medium text-black truncate" dangerouslySetInnerHTML={{ __html: post.title }} />
             </div>
             <button
-              onClick={() => toggleVisibility(post.id)}
-              className={`px-3 py-1 rounded text-sm font-medium whitespace-nowrap ${post.is_published ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}
+              onClick={() => toggleVisibility(post)}
+              className={`px-3 py-1 rounded text-sm font-medium whitespace-nowrap ${post.is_visible ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}
             >
-              {post.is_published ? 'Hide' : 'Show'}
+              {post.is_visible ? 'Hide' : 'Show'}
             </button>
           </div>
         ))}
