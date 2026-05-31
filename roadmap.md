@@ -42,18 +42,37 @@
 - [x] Add user authentication for gated content (Resend)
 - [ ] Integrate with third-party services
 
-### Phase 4: Admin CMS & Customization (In Progress)
-- [ ] Admin authentication (login/logout)
-- [ ] Admin dashboard overview
-- [ ] Blog post management (CRUD)
-- [ ] Rich text editor with TipTap
-- [ ] Media library for images/PDFs
-- [ ] Homepage hero editor
-- [ ] Site settings panel (social links, contact email, podcast URL)
-- [ ] Email subscriber list view
-- [ ] Podcast episode manager
-- [ ] Testimonials section manager
-- [ ] Event/webinar announcements
+### Phase 4: Site Editor Portal (In Progress)
+- [x] Site Editor login page with credentials
+- [x] Site settings editor (social links, contact email, podcast URL)
+- [x] Homepage hero editor (title, subtitle, tagline)
+- [x] Testimonials section manager (add/edit/delete)
+- [x] Podcast episode manager (add/edit/delete)
+- [x] Mobile-first responsive UI
+- [x] Live site integration (settings fetched from Supabase)
+- [x] Media library for images/PDFs
+- [x] Email subscriber list view
+- [x] Event/webinar announcements
+- [x] Events display on homepage
+- [x] Subscription form saves to Supabase
+- [x] Blog post management (CRUD)
+- [x] Blog visibility management (search + bulk toggle)
+- [x] Theme editor with 5 presets + custom colors
+- [x] Dynamic theme colors applied to site (buttons, footer, tagline)
+- [x] Save confirmation messages
+- [x] Site Identity (site name, description)
+- [x] Hero image URL customization
+- [x] SEO meta tags (title, description) - applied to page head
+- [x] Homepage section visibility (Books, Community Ad, Events, Testimonials)
+- [x] CTA button text customization
+- [x] Blog section title
+- [x] Join modal text (title, message)
+- [x] Footer mission statement
+- [x] Site name used in navigation header
+- [x] Books management (add/edit/delete books displayed on homepage)
+- [ ] Navigation header styling (custom colors)
+- [ ] Analytics dashboard (later phase)
+- [ ] Re-enable middleware auth (fix Supabase cookie sync)
 
 ### Phase 5: Launch
 - [ ] Final testing across devices

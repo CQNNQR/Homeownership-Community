@@ -2,10 +2,8 @@
 
 import { useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { useRouter } from 'next/navigation'
 
 export default function AdminLoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -16,25 +14,37 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError('')
 
+    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+    console.log('Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (authError) {
-      setError(authError.message)
+      console.log('Auth result:', { data, error: authError })
+
+      if (authError) {
+        setError(authError.message)
+        setLoading(false)
+        return
+      }
+
+      if (data.user) {
+        console.log('Login successful, doing full page reload to /admin')
+        // Full page navigation so middleware can see the auth cookie
+        window.location.href = '/admin'
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Connection failed. Please try again.')
       setLoading(false)
-      return
-    }
-
-    if (data.user) {
-      router.push('/admin')
-      router.refresh()
     }
   }
 
@@ -42,8 +52,8 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-black">Admin Login</h1>
-          <p className="text-gray-600 mt-2">Sign in to manage the site</p>
+          <h1 className="text-2xl font-bold text-black">Site Editor Login</h1>
+          <p className="text-gray-600 mt-2">Sign in to manage your site content</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">

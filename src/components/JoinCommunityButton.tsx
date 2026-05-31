@@ -6,6 +6,10 @@ import { createPortal } from 'react-dom'
 export default function JoinCommunityButton() {
   const [showModal, setShowModal] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [primaryColor, setPrimaryColor] = useState('#A61C30')
+  const [optinTitle, setOptinTitle] = useState('Join the Community')
+  const [optinMessage, setOptinMessage] = useState("Fill out the form below and we'll be in touch soon.")
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -13,15 +17,48 @@ export default function JoinCommunityButton() {
     phone: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Thank you for joining! We will be in touch soon.')
-    setShowModal(false)
-    setFormData({ firstName: '', lastName: '', email: '', phone: '' })
+    setSubmitting(true)
+
+    try {
+      const res = await fetch('/api/subscribers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      })
+
+      if (res.ok) {
+        alert('Thank you for joining! We will be in touch soon.')
+        setShowModal(false)
+        setFormData({ firstName: '', lastName: '', email: '', phone: '' })
+      } else {
+        const data = await res.json()
+        alert(data.message || 'Something went wrong. Please try again.')
+      }
+    } catch (err) {
+      alert('Failed to submit. Please try again.')
+    }
+
+    setSubmitting(false)
   }
 
   useEffect(() => {
     setMounted(true)
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.theme_primary_color) {
+          setPrimaryColor(data.theme_primary_color)
+        }
+        if (data.optin_title) {
+          setOptinTitle(data.optin_title)
+        }
+        if (data.optin_message) {
+          setOptinMessage(data.optin_message)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const modal = showModal ? (
@@ -40,8 +77,8 @@ export default function JoinCommunityButton() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <h3 className="text-2xl font-bold text-black mb-2">Join the Community</h3>
-        <p className="text-gray-600 mb-6">Fill out the form below and we&apos;ll be in touch soon.</p>
+        <h3 className="text-2xl font-bold text-black mb-2">{optinTitle}</h3>
+        <p className="text-gray-600 mb-6">{optinMessage}</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -90,9 +127,11 @@ export default function JoinCommunityButton() {
           </div>
           <button
             type="submit"
-            className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2"
+            disabled={submitting}
+            className="w-full text-white font-semibold py-4 rounded-lg transition-colors mt-2 disabled:opacity-50"
+            style={{ backgroundColor: primaryColor }}
           >
-            Submit
+            {submitting ? 'Submitting...' : 'Submit'}
           </button>
         </form>
       </div>
@@ -103,7 +142,8 @@ export default function JoinCommunityButton() {
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="bg-red-700 hover:bg-red-800 text-white font-semibold px-6 py-3 rounded text-sm transition-colors"
+        className="text-white font-semibold px-6 py-3 rounded text-sm transition-opacity"
+        style={{ backgroundColor: primaryColor }}
       >
         Join the Community
       </button>

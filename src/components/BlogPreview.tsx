@@ -14,7 +14,11 @@ async function getLatestPosts() {
   }
 }
 
-export default async function BlogPreview() {
+interface BlogPreviewProps {
+  title?: string
+}
+
+export default async function BlogPreview({ title }: BlogPreviewProps) {
   const posts = await getLatestPosts()
 
   if (posts.length === 0) {
@@ -25,7 +29,7 @@ export default async function BlogPreview() {
     <section id="blog" className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-black mb-4">Real Estate Investing & Homeownership Education</h2>
+          <h2 className="text-4xl font-bold text-black mb-4">{title || 'Latest from the Blog'}</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Insights, tips, and strategies for navigating the real estate market, building generational wealth, and developing your ownership mindset.
           </p>
