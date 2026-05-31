@@ -1915,6 +1915,18 @@ function PodcastEditor() {
     fetchEpisodes()
   }
 
+  const handleToggleVisibility = async (episode: any) => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    await supabase
+      .from('podcast_episodes')
+      .update({ is_visible: !episode.is_visible })
+      .eq('id', episode.id)
+    fetchEpisodes()
+  }
+
   const handleEdit = (episode: any) => {
     setForm({
       title: episode.title,
@@ -2016,9 +2028,14 @@ function PodcastEditor() {
           <div key={ep.id} className="bg-white rounded-xl shadow p-4 sm:p-6">
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1">
-                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-medium">
-                  Ep. {ep.episode_number || '?'}
-                </span>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-medium">
+                    Ep. {ep.episode_number || '?'}
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded font-medium ${ep.is_visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {ep.is_visible ? 'Visible' : 'Hidden'}
+                  </span>
+                </div>
                 <h3 className="font-bold text-black mt-2">{ep.title}</h3>
                 {ep.description && <p className="text-sm text-gray-600 mt-1">{ep.description}</p>}
                 <a
@@ -2031,6 +2048,12 @@ function PodcastEditor() {
                 </a>
               </div>
               <div className="flex gap-2">
+                <button
+                  onClick={() => handleToggleVisibility(ep)}
+                  className={`text-sm font-medium px-3 py-1 rounded ${ep.is_visible ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                >
+                  {ep.is_visible ? 'Hide' : 'Show'}
+                </button>
                 <button
                   onClick={() => handleEdit(ep)}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"

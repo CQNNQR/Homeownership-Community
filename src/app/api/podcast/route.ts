@@ -10,6 +10,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('podcast_episodes')
     .select('*')
+    .eq('is_visible', true)
     .order('episode_number', { ascending: true })
 
   if (error) {

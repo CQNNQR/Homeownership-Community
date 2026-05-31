@@ -8,6 +8,7 @@ export default function Navigation() {
   const [showModal, setShowModal] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [showPodcast, setShowPodcast] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -30,6 +31,16 @@ export default function Navigation() {
             header_bg: data.theme_header_bg || '#FFFFFF',
             header_text: data.theme_header_text || '#000000',
           })
+        }
+      })
+      .catch(() => {})
+
+    // Check if there are visible podcasts
+    fetch('/api/podcast')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setShowPodcast(true)
         }
       })
       .catch(() => {})
@@ -129,6 +140,7 @@ export default function Navigation() {
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <Link href="/blog" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>Blog</Link>
+              {showPodcast && <Link href="/podcast" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>Podcast</Link>}
               <Link href="/about" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>About</Link>
               <Link href="/resources" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>Resources</Link>
               <Link href="/books" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }}>Books</Link>
@@ -159,6 +171,7 @@ export default function Navigation() {
             <div className="md:hidden py-4 border-t border-gray-200">
               <div className="flex flex-col gap-4">
                 <Link href="/blog" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
+                {showPodcast && <Link href="/podcast" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>Podcast</Link>}
                 <Link href="/about" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>About</Link>
                 <Link href="/resources" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>Resources</Link>
                 <Link href="/books" className="hover:opacity-80 transition-colors text-sm font-medium" style={{ color: theme.header_text }} onClick={() => setMobileMenuOpen(false)}>Books</Link>
