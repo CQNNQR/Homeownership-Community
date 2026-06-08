@@ -1,6 +1,5 @@
-import Link from 'next/link'
 import BlogPreview from '@/components/BlogPreview'
-import JoinCommunityButton from '@/components/JoinCommunityButton'
+import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import EventsPreview from '@/components/EventsPreview'
 import TestimonialsPreview from '@/components/TestimonialsPreview'
@@ -22,7 +21,6 @@ export async function generateMetadata() {
 export default async function Home() {
   const settings = await getSettings()
 
-  const siteName = settings.site_name || 'The Homeownership Community'
   const heroTitle = settings.hero_title || 'Build <span className="text-red-500">Generational Wealth</span> Through <span className="text-red-500">Real Estate Ownership</span>'
   const heroSubtitle = settings.hero_subtitle || "Join The Home Ownership Community — a growing network dedicated to helping future homeowners, real estate investors, and aspiring landlords achieve financial freedom through ownership."
   const siteTagline = settings.site_tagline || 'We Create Owners.'
@@ -38,23 +36,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <Link href="/" className="flex items-center gap-1">
-              <span className="text-xl font-bold text-black tracking-tight">{siteName.toUpperCase()}</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/blog" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Blog</Link>
-              <Link href="/about" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">About</Link>
-              <Link href="/resources" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Resources</Link>
-              <Link href="/books" className="text-gray-600 hover:text-black transition-colors text-sm font-medium">Books</Link>
-              <JoinCommunityButton />
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="relative min-h-screen pt-20">
