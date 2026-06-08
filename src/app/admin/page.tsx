@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export default function SiteEditor() {
   const [user, setUser] = useState<{ email: string | null } | null>(null)
@@ -258,16 +259,6 @@ export default function SiteEditor() {
             }`}
           >
             Theme
-          </button>
-          <button
-            onClick={() => setActiveSection('integrations')}
-            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-              activeSection === 'integrations'
-                ? 'border-red-700 text-red-700'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Integrations
           </button>
         </div>
       </nav>
@@ -625,11 +616,6 @@ export default function SiteEditor() {
         {/* Theme Section */}
         {activeSection === 'theme' && (
           <ThemeEditor />
-        )}
-
-        {/* Integrations Section */}
-        {activeSection === 'integrations' && (
-          <IntegrationsManager />
         )}
       </main>
     </div>
@@ -2123,8 +2109,11 @@ function SubscribersManager() {
   const [subscribers, setSubscribers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [showZapier, setShowZapier] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     fetchSubscribers()
   }, [])
 
@@ -2171,13 +2160,24 @@ function SubscribersManager() {
           <h2 className="text-lg font-bold text-black">Email Subscribers</h2>
           <p className="text-sm text-gray-500">{subscribers.length} total subscribers</p>
         </div>
-        <button
-          onClick={exportToCSV}
-          disabled={exporting || subscribers.length === 0}
-          className="bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
-        >
-          {exporting ? 'Exporting...' : 'Export CSV'}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={exportToCSV}
+            disabled={exporting || subscribers.length === 0}
+            className="bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+          >
+            {exporting ? 'Exporting...' : 'Export CSV'}
+          </button>
+          <button
+            onClick={() => setShowZapier(true)}
+            className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors inline-flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Zapier
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-hidden">
@@ -2216,6 +2216,298 @@ function SubscribersManager() {
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {mounted && showZapier && createPortal(
+        <ZapierConfigModal
+          onClose={() => { setShowZapier(false); fetchSubscribers() }}
+        />,
+        document.body
+      )}
+    </div>
+  )
+}
+
+function ZapierConfigModal({ onClose }: { onClose: () => void }) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [initialUrl, setInitialUrl] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [message, setMessage] = useState('')
+  const [testResult, setTestResult] = useState<{ ok: boolean; status?: number; error?: string } | null>(null)
+  const [lastSentAt, setLastSentAt] = useState<string | null>(null)
+  const [lastResult, setLastResult] = useState<string | null>(null)
+
+  useEffect(() => {
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('key, value')
+        .in('key', ['zapier_webhook_url', 'zapier_last_sent_at', 'zapier_last_result'])
+
+      if (!error && data) {
+        for (const row of data) {
+          if (row.key === 'zapier_webhook_url') {
+            setWebhookUrl(row.value || '')
+            setInitialUrl(row.value || '')
+          }
+          if (row.key === 'zapier_last_sent_at') setLastSentAt(row.value || null)
+          if (row.key === 'zapier_last_result') setLastResult(row.value || null)
+        }
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const persistMeta = async (key: string, value: string | null) => {
+    await supabase
+      .from('site_settings')
+      .upsert({ key, value }, { onConflict: 'key' })
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    setMessage('')
+
+    const value = webhookUrl.trim()
+    if (value && !/^https?:\/\//i.test(value)) {
+      setMessage('Webhook URL must start with http:// or https://')
+      setSaving(false)
+      return
+    }
+
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert({ key: 'zapier_webhook_url', value: value || '' }, { onConflict: 'key' })
+
+    setSaving(false)
+    if (error) {
+      setMessage(`Failed to save: ${error.message}`)
+    } else {
+      setInitialUrl(value)
+      setMessage(value ? 'Webhook saved.' : 'Webhook cleared.')
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
+
+  const handleClear = async () => {
+    setSaving(true)
+    setMessage('')
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert({ key: 'zapier_webhook_url', value: '' }, { onConflict: 'key' })
+    setSaving(false)
+    if (error) {
+      setMessage(`Failed to clear: ${error.message}`)
+    } else {
+      setWebhookUrl('')
+      setInitialUrl('')
+      setMessage('Webhook cleared.')
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
+
+  const handleTest = async () => {
+    const value = webhookUrl.trim()
+    if (!value) {
+      setTestResult({ ok: false, error: 'Save a webhook URL first.' })
+      return
+    }
+    if (!/^https?:\/\//i.test(value)) {
+      setTestResult({ ok: false, error: 'Webhook URL must start with http:// or https://' })
+      return
+    }
+
+    setTesting(true)
+    setTestResult(null)
+    setMessage('')
+
+    const payload = {
+      email: 'test@example.com',
+      first_name: 'Test',
+      last_name: 'Lead',
+      phone: '+15555550100',
+      source: 'admin_test',
+      created_at: new Date().toISOString(),
+      note: 'This is a test lead from the Homeownership Community admin.',
+    }
+
+    try {
+      const res = await fetch(value, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const text = await res.text().catch(() => '')
+      setTestResult({ ok: res.ok, status: res.status, error: res.ok ? undefined : (text || `HTTP ${res.status}`) })
+      const nowIso = new Date().toISOString()
+      setLastSentAt(nowIso)
+      const resultLabel = res.ok ? `OK (${res.status})` : `Failed (${res.status})`
+      setLastResult(resultLabel)
+      await persistMeta('zapier_last_sent_at', nowIso)
+      await persistMeta('zapier_last_result', resultLabel)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      setTestResult({ ok: false, error: errorMsg })
+      const nowIso = new Date().toISOString()
+      setLastSentAt(nowIso)
+      setLastResult(`Error: ${errorMsg}`)
+      await persistMeta('zapier_last_sent_at', nowIso)
+      await persistMeta('zapier_last_result', `Error: ${errorMsg}`)
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const isConfigured = initialUrl.length > 0
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-4 flex items-center justify-between rounded-t-2xl sm:rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-700 text-white w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-black">Zapier Integration</h2>
+              <p className="text-xs text-gray-500">Send leads to GoHighLevel or any other CRM</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            aria-label="Close"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
+            <span className="text-sm text-gray-600">Status</span>
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${isConfigured ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+              {isConfigured ? 'Connected' : 'Not configured'}
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-6 text-gray-500 text-sm">Loading...</div>
+          ) : (
+            <>
+              <form onSubmit={handleSave} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Webhook URL
+                  </label>
+                  <input
+                    type="url"
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black text-sm font-mono focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700"
+                    placeholder="https://hooks.zapier.com/hooks/catch/..."
+                    inputMode="url"
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                    In Zapier: create a Zap with <strong>Webhooks by Zapier</strong> (Catch Hook) as the trigger, copy the URL, then add a <strong>GoHighLevel</strong> &ldquo;Create Contact&rdquo; action mapped to the fields below.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex-1 bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTest}
+                    disabled={testing || !webhookUrl.trim()}
+                    className="flex-1 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
+                  >
+                    {testing ? 'Sending...' : 'Send Test Lead'}
+                  </button>
+                  {isConfigured && (
+                    <button
+                      type="button"
+                      onClick={handleClear}
+                      disabled={saving}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              {message && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
+                  {message}
+                </div>
+              )}
+
+              {testResult && (
+                <div className={`px-3 py-2 rounded-lg text-sm ${testResult.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                  {testResult.ok
+                    ? `Test lead sent${testResult.status ? ` (HTTP ${testResult.status})` : ''}. Check your Zap or GoHighLevel.`
+                    : `Failed${testResult.status ? ` (HTTP ${testResult.status})` : ''}: ${testResult.error || 'Unknown error'}`}
+                </div>
+              )}
+
+              {(lastSentAt || lastResult) && (
+                <div className="text-xs text-gray-500 space-y-0.5 pt-2 border-t border-gray-100">
+                  {lastSentAt && <p>Last test: {new Date(lastSentAt).toLocaleString()}</p>}
+                  {lastResult && (
+                    <p>
+                      Last result:{' '}
+                      <span className={lastResult.startsWith('OK') ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
+                        {lastResult}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <details className="bg-gray-50 rounded-lg p-3 text-sm">
+                <summary className="cursor-pointer font-medium text-gray-700 select-none">
+                  Payload reference
+                </summary>
+                <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto font-mono mt-2">{`{
+  "email": "jane@example.com",
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "phone": "+15555550100",
+  "source": "nav_modal",
+  "created_at": "2026-06-08T15:30:00.000Z"
+}`}</pre>
+                <p className="text-xs text-gray-500 mt-2">
+                  <code className="bg-gray-100 px-1 rounded">source</code> is <code className="bg-gray-100 px-1 rounded">nav_modal</code> for the navigation &ldquo;Join Community&rdquo; form.
+                </p>
+              </details>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -2632,254 +2924,6 @@ function PodcastEditor() {
             </div>
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-// Integrations Manager Component - Zapier / GoHighLevel lead transfer
-function IntegrationsManager() {
-  const [webhookUrl, setWebhookUrl] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [testing, setTesting] = useState(false)
-  const [message, setMessage] = useState('')
-  const [testResult, setTestResult] = useState<{ ok: boolean; status?: number; error?: string; skipped?: boolean } | null>(null)
-  const [lastSentAt, setLastSentAt] = useState<string | null>(null)
-  const [lastResult, setLastResult] = useState<string | null>(null)
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  useEffect(() => {
-    const load = async () => {
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('key, value')
-        .in('key', ['zapier_webhook_url', 'zapier_last_sent_at', 'zapier_last_result'])
-
-      if (!error && data) {
-        for (const row of data) {
-          if (row.key === 'zapier_webhook_url') setWebhookUrl(row.value || '')
-          if (row.key === 'zapier_last_sent_at') setLastSentAt(row.value || null)
-          if (row.key === 'zapier_last_result') setLastResult(row.value || null)
-        }
-      }
-      setLoading(false)
-    }
-    load()
-  }, [])
-
-  const persistMeta = async (key: string, value: string | null) => {
-    await supabase
-      .from('site_settings')
-      .upsert({ key, value }, { onConflict: 'key' })
-  }
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-    setMessage('')
-
-    const value = webhookUrl.trim()
-    if (value && !/^https?:\/\//i.test(value)) {
-      setMessage('Webhook URL must start with http:// or https://')
-      setSaving(false)
-      return
-    }
-
-    const { error } = await supabase
-      .from('site_settings')
-      .upsert({ key: 'zapier_webhook_url', value: value || '' }, { onConflict: 'key' })
-
-    setSaving(false)
-    if (error) {
-      setMessage(`Failed to save: ${error.message}`)
-    } else {
-      setMessage(value ? 'Webhook saved.' : 'Webhook cleared.')
-      setTimeout(() => setMessage(''), 3000)
-    }
-  }
-
-  const handleClear = async () => {
-    setSaving(true)
-    setMessage('')
-    const { error } = await supabase
-      .from('site_settings')
-      .upsert({ key: 'zapier_webhook_url', value: '' }, { onConflict: 'key' })
-    setSaving(false)
-    if (error) {
-      setMessage(`Failed to clear: ${error.message}`)
-    } else {
-      setWebhookUrl('')
-      setMessage('Webhook cleared.')
-      setTimeout(() => setMessage(''), 3000)
-    }
-  }
-
-  const handleTest = async () => {
-    const value = webhookUrl.trim()
-    if (!value) {
-      setTestResult({ ok: false, error: 'No webhook URL configured. Save a URL first.' })
-      return
-    }
-    if (!/^https?:\/\//i.test(value)) {
-      setTestResult({ ok: false, error: 'Webhook URL must start with http:// or https://' })
-      return
-    }
-
-    setTesting(true)
-    setTestResult(null)
-    setMessage('')
-
-    const payload = {
-      email: 'test@example.com',
-      first_name: 'Test',
-      last_name: 'Lead',
-      phone: '+15555550100',
-      source: 'admin_test',
-      created_at: new Date().toISOString(),
-      note: 'This is a test lead from the Homeownership Community admin.',
-    }
-
-    try {
-      const res = await fetch(value, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const text = await res.text().catch(() => '')
-      const result = {
-        ok: res.ok,
-        status: res.status,
-        error: res.ok ? undefined : (text || `HTTP ${res.status}`),
-      }
-      setTestResult(result)
-      const nowIso = new Date().toISOString()
-      setLastSentAt(nowIso)
-      setLastResult(res.ok ? `OK (${res.status})` : `Failed (${res.status})`)
-      await persistMeta('zapier_last_sent_at', nowIso)
-      await persistMeta('zapier_last_result', res.ok ? `OK (${res.status})` : `Failed (${res.status})`)
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
-      setTestResult({ ok: false, error: errorMsg })
-      const nowIso = new Date().toISOString()
-      setLastSentAt(nowIso)
-      setLastResult(`Error: ${errorMsg}`)
-      await persistMeta('zapier_last_sent_at', nowIso)
-      await persistMeta('zapier_last_result', `Error: ${errorMsg}`)
-    } finally {
-      setTesting(false)
-    }
-  }
-
-  if (loading) return <div className="text-center py-8">Loading...</div>
-
-  const isConfigured = webhookUrl.trim().length > 0
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-black">Integrations</h2>
-        <p className="text-sm text-gray-500">Send new subscriber leads to other tools (Zapier, GoHighLevel, etc.)</p>
-      </div>
-
-      <div className="bg-white rounded-xl shadow p-4 sm:p-6">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <h3 className="text-lg font-bold text-black">Zapier Webhook</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Connect to GoHighLevel (or any other CRM) by pasting a Zapier &ldquo;Catch Hook&rdquo; URL below.
-              Every new email subscriber will be POSTed to this URL with their name, email, phone, and source.
-            </p>
-          </div>
-          <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${isConfigured ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-            {isConfigured ? 'Connected' : 'Not configured'}
-          </span>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Webhook URL</label>
-            <input
-              type="url"
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 font-mono text-sm"
-              placeholder="https://hooks.zapier.com/hooks/catch/12345678/abcdefgh/"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Get this from Zapier: create a Zap with &ldquo;Webhooks by Zapier&rdquo; (Catch Hook) as the trigger, then add a GoHighLevel &ldquo;Create Contact&rdquo; action mapped to the fields below.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
-            >
-              {saving ? 'Saving...' : 'Save Webhook'}
-            </button>
-            <button
-              type="button"
-              onClick={handleTest}
-              disabled={testing || !isConfigured}
-              className="bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
-            >
-              {testing ? 'Sending Test...' : 'Send Test Lead'}
-            </button>
-            {isConfigured && (
-              <button
-                type="button"
-                onClick={handleClear}
-                disabled={saving}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-
-          {message && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm">
-              {message}
-            </div>
-          )}
-
-          {testResult && (
-            <div className={`px-4 py-3 rounded-lg text-sm ${testResult.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
-              {testResult.ok
-                ? `Test lead sent successfully${testResult.status ? ` (HTTP ${testResult.status})` : ''}. Check your Zap or GoHighLevel for the contact.`
-                : `Test failed${testResult.status ? ` (HTTP ${testResult.status})` : ''}: ${testResult.error || 'Unknown error'}`}
-            </div>
-          )}
-        </form>
-
-        {(lastSentAt || lastResult) && (
-          <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500 space-y-1">
-            {lastSentAt && <p>Last test: {new Date(lastSentAt).toLocaleString()}</p>}
-            {lastResult && <p>Last result: <span className={lastResult.startsWith('OK') ? 'text-green-700' : 'text-red-700'}>{lastResult}</span></p>}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-xl shadow p-4 sm:p-6">
-        <h3 className="text-lg font-bold text-black mb-2">Payload sent to Zapier</h3>
-        <p className="text-sm text-gray-500 mb-4">When a new subscriber is added, the following JSON is POSTed to your webhook URL.</p>
-        <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto font-mono">{`{
-  "email": "jane@example.com",
-  "first_name": "Jane",
-  "last_name": "Doe",
-  "phone": "+15555550100",
-  "source": "nav_modal",
-  "created_at": "2026-06-08T15:30:00.000Z"
-}`}</pre>
-        <p className="text-xs text-gray-500 mt-3">
-          <code className="bg-gray-100 px-1 rounded">source</code> is <code className="bg-gray-100 px-1 rounded">nav_modal</code> for the navigation &ldquo;Join Community&rdquo; form. Map it to a custom field in GoHighLevel if you want to track lead source.
-        </p>
       </div>
     </div>
   )
