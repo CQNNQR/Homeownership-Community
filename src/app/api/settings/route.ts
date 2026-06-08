@@ -1,23 +1,25 @@
 import { NextResponse } from 'next/server'
 import { getServerClient, getServiceRoleClient } from '@/lib/admin'
+import { createClient } from '@supabase/supabase-js'
 
 export async function GET() {
-  // Admin-only: site_settings contains private theme/seo/social values that
-  // we don't want to leak via the public anon client. The admin editor at
-  // /admin calls this via an authenticated session and renders the data
-  // through the authed server-side guard below.
-  const authSupabase = await getServerClient()
-  const { data: { user } } = await authSupabase.auth.getUser()
+  // Public read. The keys stored in site_settings (theme_*, social URLs,
+  // hero text, footer copy, SEO meta, section visibility) are all values
+  // that need to render on the public-facing site (Navigation, Footer,
+  // EventsPreview fetch this on every public page load). Gating GET behind
+  // admin auth caused 401s on every anonymous visit and broke the theme
+  // picker on the public site. The anon-key Supabase client has SELECT on
+  // site_settings via RLS (server-side getSettings() in src/lib/settings.ts
+  // has been doing the same read for months), so we use the same approach
+  // here. Writes remain admin-gated below.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.json({})
   }
 
-  if (user.app_metadata?.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  const supabase = getServiceRoleClient() ?? authSupabase
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
   const { data, error } = await supabase
     .from('site_settings')

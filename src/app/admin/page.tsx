@@ -77,8 +77,11 @@ export default function SiteEditor() {
 
   // Fetch settings when the Settings tab mounts (also re-fetches on
   // every section change so edits in other tabs that touch settings
-  // are reflected). Uses the admin-gated /api/settings endpoint so
-  // the anon Supabase client never reads or writes site_settings.
+  // are reflected). GET /api/settings is public (the keys are all
+  // public-by-nature: theme, social, hero, footer, SEO); POST stays
+  // admin-gated server-side. Auth is enforced by /api/auth/check on
+  // the page-mount useEffect above and by the server on POST, so anon
+  // users cannot mutate site_settings.
   useEffect(() => {
     if (activeSection === 'settings') {
       fetchSettings()
