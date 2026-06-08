@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
     )
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -31,15 +31,28 @@ export default function AdminLoginPage() {
         return
       }
 
-      if (data.user) {
-        if (data.user.app_metadata?.role !== 'admin') {
-          await supabase.auth.signOut()
-          setError('You do not have admin access.')
-          setLoading(false)
-          return
-        }
-        window.location.href = '/admin'
+      // Confirm via the server. The server is the source of truth for
+      // app_metadata.role (it's tamper-resistant in the JWT, not the
+      // client-side user object). If the user authenticated but isn't
+      // an admin, sign them out and surface a clear error.
+      const checkRes = await fetch('/api/auth/check')
+      const checkData = await checkRes.json().catch(() => ({ isAdmin: false, user: null }))
+
+      if (!checkData?.user) {
+        await supabase.auth.signOut()
+        setError('Authentication failed. Please try again.')
+        setLoading(false)
+        return
       }
+
+      if (!checkData.isAdmin) {
+        await supabase.auth.signOut()
+        setError('Not an admin account. This account does not have admin access.')
+        setLoading(false)
+        return
+      }
+
+      window.location.href = '/admin'
     } catch (err) {
       console.error('Login error:', err)
       setError('Connection failed. Please try again.')

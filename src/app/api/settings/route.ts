@@ -2,7 +2,22 @@ import { NextResponse } from 'next/server'
 import { getServerClient, getServiceRoleClient } from '@/lib/admin'
 
 export async function GET() {
-  const supabase = getServiceRoleClient() ?? (await getServerClient())
+  // Admin-only: site_settings contains private theme/seo/social values that
+  // we don't want to leak via the public anon client. The admin editor at
+  // /admin calls this via an authenticated session and renders the data
+  // through the authed server-side guard below.
+  const authSupabase = await getServerClient()
+  const { data: { user } } = await authSupabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (user.app_metadata?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const supabase = getServiceRoleClient() ?? authSupabase
 
   const { data, error } = await supabase
     .from('site_settings')

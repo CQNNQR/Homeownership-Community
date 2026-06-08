@@ -1,11 +1,24 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+/**
+ * Next 16 proxy (replaces middleware.ts).
+ *
+ * Runs for /admin/* only (see `config.matcher` below).
+ * - /admin/login: pass through so the login page can render.
+ * - Other /admin/* paths: require a Supabase session with
+ *   app_metadata.role === 'admin'. Non-admins go to '/', signed-out
+ *   users go to '/admin/login'.
+ */
 export async function proxy(request: NextRequest) {
-  if (!request.nextUrl.pathname.startsWith('/admin') || request.nextUrl.pathname === '/admin/login') {
+  const pathname = request.nextUrl.pathname
+
+  // Always allow the login page itself to render.
+  if (pathname === '/admin/login') {
     return NextResponse.next()
   }
 
+  // Build a mutable response we can attach refreshed cookies to.
   let response = NextResponse.next({
     request: { headers: request.headers },
   })
@@ -19,11 +32,16 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          // Mirror refreshed cookies onto both the incoming request
+          // (so downstream reads see the latest values) and the
+          // outgoing response (so the browser stores them).
+          for (const { name, value } of cookiesToSet) {
+            request.cookies.set(name, value)
+          }
           response = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
+          for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options)
-          )
+          }
         },
       },
     }
@@ -47,5 +65,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Restrict the proxy to /admin/* so we don't pay the auth cost on
+  // every public route.
   matcher: ['/admin/:path*'],
 }

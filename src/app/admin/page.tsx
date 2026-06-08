@@ -1,13 +1,15 @@
 'use client'
 
-import { createClient } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { supabase } from '@/lib/supabase'
 
 export default function SiteEditor() {
   const [user, setUser] = useState<{ email: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('settings')
+  // Inline, user-visible error messages for the Site Settings section.
+  const [errors, setErrors] = useState<string[]>([])
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -73,7 +75,10 @@ export default function SiteEditor() {
     checkAuth()
   }, [])
 
-  // Fetch settings when section changes
+  // Fetch settings when the Settings tab mounts (also re-fetches on
+  // every section change so edits in other tabs that touch settings
+  // are reflected). Uses the admin-gated /api/settings endpoint so
+  // the anon Supabase client never reads or writes site_settings.
   useEffect(() => {
     if (activeSection === 'settings') {
       fetchSettings()
@@ -81,28 +86,25 @@ export default function SiteEditor() {
   }, [activeSection])
 
   const fetchSettings = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('key, value')
-
-    if (!error && data) {
-      const settingsObj: any = {}
-      data.forEach((item: any) => {
-        settingsObj[item.key] = item.value
-      })
-      setSettings(prev => ({ ...prev, ...settingsObj }))
+    try {
+      const res = await fetch('/api/settings', { credentials: 'include' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setErrors([`Failed to load settings: ${data.error || res.statusText}`])
+        return
+      }
+      const data = await res.json()
+      setSettings(prev => ({ ...prev, ...data }))
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setErrors([`Failed to load settings: ${msg}`])
     }
   }
 
   const handleLogout = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    // Use the module-level Supabase singleton so we don't create a
+    // second GoTrueClient and trigger the "Multiple GoTrueClient
+    // instances" warning.
     await supabase.auth.signOut()
     window.location.href = '/'
   }
@@ -110,33 +112,42 @@ export default function SiteEditor() {
   const saveSettings = async () => {
     setSaving(true)
     setSaveMessage('')
+    setErrors([])
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    // Build the array form expected by POST /api/settings.
+    const updates = Object.entries(settings).map(([key, value]) => ({
+      key,
+      value: value == null ? '' : String(value),
+    }))
 
-    let hasError = false
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(updates),
+      })
 
-    // Update each setting
-    for (const [key, value] of Object.entries(settings)) {
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert({ key, value }, { onConflict: 'key' })
-
-      if (error) {
-        console.error(`Error saving ${key}:`, error)
-        hasError = true
+      if (!res.ok) {
+        // Surface the server's error message inline instead of
+        // logging it to the console where the user can't see it.
+        const data = await res.json().catch(() => ({}))
+        const message = data.error || `Save failed (HTTP ${res.status})`
+        setErrors([message])
+        setSaving(false)
+        return
       }
-    }
 
-    setSaving(false)
-    if (hasError) {
-      setSaveMessage('Some settings failed to save. Please try again.')
-    } else {
-      setSaveMessage('Settings saved successfully!')
+      const data = await res.json().catch(() => ({}))
+      const count = typeof data.count === 'number' ? data.count : updates.length
+      setSaveMessage(`Settings saved successfully! (${count} key${count === 1 ? '' : 's'} updated)`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setErrors([`Save failed: ${msg}`])
+    } finally {
+      setSaving(false)
+      setTimeout(() => setSaveMessage(''), 5000)
     }
-    setTimeout(() => setSaveMessage(''), 5000)
   }
 
   if (loading) {
@@ -268,6 +279,23 @@ export default function SiteEditor() {
         {/* Site Settings Section */}
         {activeSection === 'settings' && (
           <div className="space-y-6">
+            {errors.length > 0 && (
+              <div
+                role="alert"
+                data-testid="settings-errors"
+                className="bg-red-50 border border-red-300 text-red-800 rounded-lg px-4 py-3"
+              >
+                <p className="font-semibold text-sm mb-1">
+                  {errors.length === 1 ? 'Error' : `${errors.length} errors`}
+                </p>
+                <ul className="list-disc list-inside text-sm space-y-0.5">
+                  {errors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Site Identity */}
             <div className="bg-white rounded-xl shadow p-4 sm:p-6">
               <h2 className="text-lg font-bold text-black mb-4">Site Identity</h2>
@@ -565,16 +593,24 @@ export default function SiteEditor() {
               </div>
             </div>
 
-            <button
-              onClick={saveSettings}
-              disabled={saving}
-              className="w-full sm:w-auto bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
-            >
-              {saving ? 'Saving...' : 'Save Settings'}
-            </button>
-            {saveMessage && (
-              <span className="ml-4 text-green-700 font-medium">{saveMessage}</span>
-            )}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                onClick={saveSettings}
+                disabled={saving}
+                className="w-full sm:w-auto bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+              >
+                {saving ? 'Saving...' : 'Save Settings'}
+              </button>
+              {saveMessage && (
+                <div
+                  role="status"
+                  data-testid="settings-save-message"
+                  className="bg-green-100 border border-green-300 text-green-800 rounded-lg px-4 py-2 text-sm font-medium"
+                >
+                  {saveMessage}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -636,15 +672,13 @@ function BooksManager() {
   }, [])
 
   const fetchBooks = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data } = await supabase
-      .from('books')
-      .select('*')
-      .order('sort_order', { ascending: true })
-    setBooks(data || [])
+    // The /api/books GET is public (filters is_active=true) and the
+    // editor's session is authed by the proxy, so we use the public
+    // path here. If the editor ever needs to see inactive rows, the
+    // server-side admin override can be added later.
+    const res = await fetch('/api/books')
+    const data = await res.json()
+    setBooks(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
@@ -652,18 +686,18 @@ function BooksManager() {
     e.preventDefault()
     setSaving(true)
 
-    if (editingId) {
-      await fetch('/api/books', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editingId, ...form }),
-      })
-    } else {
-      await fetch('/api/books', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
+    const res = await fetch('/api/books', {
+      method: editingId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(editingId ? { id: editingId, ...form } : form),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to save: ${data.error || `HTTP ${res.status}`}`)
+      setSaving(false)
+      return
     }
 
     setForm({ title: '', author: 'Brandon Bee Dixon', amazon_url: '', description: '', sort_order: 0 })
@@ -676,11 +710,17 @@ function BooksManager() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this book?')) return
-    await fetch('/api/books', {
+    const res = await fetch('/api/books', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ id }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to delete: ${data.error || `HTTP ${res.status}`}`)
+      return
+    }
     fetchBooks()
   }
 
@@ -1465,35 +1505,34 @@ function ThemeEditor() {
   }
 
   useEffect(() => {
+    // Fetch theme_* keys from the admin-gated /api/settings endpoint
+    // so we never read site_settings through the anon Supabase client.
+    // The form is blocked (loading=true) until this resolves.
     const fetchTheme = async () => {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('key, value')
-        .in('key', [
-          'theme_preset',
-          'theme_header_bg',
-          'theme_header_text',
-          'theme_footer_bg',
-          'theme_footer_text',
-          'theme_primary_color',
-          'theme_button_text',
-        ])
-
-      if (!error && data) {
+      try {
+        const res = await fetch('/api/settings', { credentials: 'include' })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setMessage(`Failed to load theme: ${data.error || res.statusText}`)
+          setTheme(defaults)
+          setLoading(false)
+          return
+        }
+        const data: Record<string, string> = await res.json()
         const fromDb: Record<string, string> = {}
-        data.forEach((item: any) => {
-          const field = item.key.replace(/^theme_/, '')
-          fromDb[field] = item.value
-        })
+        for (const [key, value] of Object.entries(data)) {
+          if (key.startsWith('theme_')) {
+            fromDb[key.replace(/^theme_/, '')] = value
+          }
+        }
         setTheme(prev => ({ ...defaults, ...prev, ...fromDb }))
-      } else {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        setMessage(`Failed to load theme: ${msg}`)
         setTheme(defaults)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     fetchTheme()
   }, [])
@@ -1538,20 +1577,40 @@ function ThemeEditor() {
     setSaving(true)
     setMessage('')
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    // Build the array form: [{ key: 'theme_xxx', value: '...' }, ...]
+    // and POST to /api/settings in a single request. This matches the
+    // exact key names the rest of the app reads (theme_header_bg
+    // etc.) so we no longer fight the header_bg vs theme_header_bg
+    // mismatch on first save.
+    const updates = Object.entries(theme).map(([key, value]) => ({
+      key: `theme_${key}`,
+      value: value == null ? '' : String(value),
+    }))
 
-    for (const [key, value] of Object.entries(theme)) {
-      await supabase
-        .from('site_settings')
-        .upsert({ key: `theme_${key}`, value }, { onConflict: 'key' })
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(updates),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setMessage(`Failed to save theme: ${data.error || `HTTP ${res.status}`}`)
+        return
+      }
+
+      const data = await res.json().catch(() => ({}))
+      const count = typeof data.count === 'number' ? data.count : updates.length
+      setMessage(`Theme saved successfully! (${count} key${count === 1 ? '' : 's'} updated)`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setMessage(`Failed to save theme: ${msg}`)
+    } finally {
+      setSaving(false)
+      setTimeout(() => setMessage(''), 5000)
     }
-
-    setSaving(false)
-    setMessage('Theme saved successfully!')
-    setTimeout(() => setMessage(''), 3000)
   }
 
   const previewStyles = {
@@ -1584,7 +1643,19 @@ function ThemeEditor() {
         </button>
       </div>
 
-      {message && <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium">{message}</div>}
+      {message && (
+        <div
+          role="status"
+          data-testid="theme-save-message"
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+            message.toLowerCase().includes('fail')
+              ? 'bg-red-100 text-red-800 border border-red-300'
+              : 'bg-green-100 text-green-800 border border-green-300'
+          }`}
+        >
+          {message}
+        </div>
+      )}
 
       {/* Presets */}
       <div className="bg-white rounded-xl shadow p-4 sm:p-6">
@@ -1732,15 +1803,12 @@ function EventsManager() {
   }, [])
 
   const fetchEvents = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data } = await supabase
-      .from('events')
-      .select('*')
-      .order('event_date', { ascending: true })
-    setEvents(data || [])
+    // /api/events GET is public (filters is_active=true). The editor
+    // uses the public path; if it ever needs to see inactive rows,
+    // the admin override can be added later.
+    const res = await fetch('/api/events')
+    const data = await res.json()
+    setEvents(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
@@ -1755,18 +1823,18 @@ function EventsManager() {
       event_url: form.event_url,
     }
 
-    if (editingId) {
-      await fetch('/api/events', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editingId, ...payload }),
-      })
-    } else {
-      await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+    const res = await fetch('/api/events', {
+      method: editingId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(editingId ? { id: editingId, ...payload } : payload),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to save: ${data.error || `HTTP ${res.status}`}`)
+      setSaving(false)
+      return
     }
 
     setForm({ title: '', description: '', event_date: '', event_url: '' })
@@ -1778,11 +1846,17 @@ function EventsManager() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this event?')) return
-    await fetch('/api/events', {
+    const res = await fetch('/api/events', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ id }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to delete: ${data.error || `HTTP ${res.status}`}`)
+      return
+    }
     fetchEvents()
   }
 
@@ -1798,11 +1872,17 @@ function EventsManager() {
   }
 
   const handleToggleActive = async (event: any) => {
-    await fetch('/api/events', {
+    const res = await fetch('/api/events', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ id: event.id, is_active: !event.is_active }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to update: ${data.error || `HTTP ${res.status}`}`)
+      return
+    }
     fetchEvents()
   }
 
@@ -1953,15 +2033,16 @@ function MediaLibrary() {
   }, [])
 
   const fetchMedia = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data } = await supabase
-      .from('media')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setMedia(data || [])
+    // Use the admin-gated GET on /api/media so the anon Supabase
+    // client never reads from a server-side-gated table. The route
+    // is admin-only, so credentials must be included.
+    const res = await fetch('/api/media', { credentials: 'include' })
+    const data = await res.json()
+    if (!res.ok) {
+      setMedia([])
+    } else {
+      setMedia(Array.isArray(data) ? data : [])
+    }
     setLoading(false)
   }
 
@@ -1970,14 +2051,25 @@ function MediaLibrary() {
     if (!form.url) return
 
     setUploading(true)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
 
-    await supabase
-      .from('media')
-      .insert([{ name: form.name, url: form.url, type: form.type, size: form.size }])
+    const res = await fetch('/api/media', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        name: form.name,
+        url: form.url,
+        type: form.type,
+        size: form.size,
+      }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to add media: ${data.error || `HTTP ${res.status}`}`)
+      setUploading(false)
+      return
+    }
 
     setForm({ name: '', url: '', type: 'image', size: 0 })
     setUploadUrl('')
@@ -1989,11 +2081,17 @@ function MediaLibrary() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this media item?')) return
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    await supabase.from('media').delete().eq('id', id)
+    const res = await fetch('/api/media', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to delete: ${data.error || `HTTP ${res.status}`}`)
+      return
+    }
     fetchMedia()
   }
 
@@ -2230,10 +2328,10 @@ function SubscribersManager() {
 }
 
 function ZapierConfigModal({ onClose }: { onClose: () => void }) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  // Zapier config reads/writes a small set of site_settings keys
+  // (zapier_webhook_url, zapier_last_sent_at, zapier_last_result).
+  // All access goes through the admin-gated /api/settings endpoint
+  // so the anon Supabase client never touches site_settings.
   const [webhookUrl, setWebhookUrl] = useState('')
   const [initialUrl, setInitialUrl] = useState('')
   const [loading, setLoading] = useState(true)
@@ -2246,22 +2344,25 @@ function ZapierConfigModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const load = async () => {
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('key, value')
-        .in('key', ['zapier_webhook_url', 'zapier_last_sent_at', 'zapier_last_result'])
-
-      if (!error && data) {
-        for (const row of data) {
-          if (row.key === 'zapier_webhook_url') {
-            setWebhookUrl(row.value || '')
-            setInitialUrl(row.value || '')
-          }
-          if (row.key === 'zapier_last_sent_at') setLastSentAt(row.value || null)
-          if (row.key === 'zapier_last_result') setLastResult(row.value || null)
+      try {
+        const res = await fetch('/api/settings', { credentials: 'include' })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setMessage(`Failed to load: ${data.error || res.statusText}`)
+          return
         }
+        const data: Record<string, string> = await res.json()
+        const url = data.zapier_webhook_url || ''
+        setWebhookUrl(url)
+        setInitialUrl(url)
+        setLastSentAt(data.zapier_last_sent_at || null)
+        setLastResult(data.zapier_last_result || null)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        setMessage(`Failed to load: ${msg}`)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     load()
   }, [])
@@ -2272,10 +2373,29 @@ function ZapierConfigModal({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const persistSetting = async (key: string, value: string | null) => {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify([{ key, value: value ?? '' }]),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || `HTTP ${res.status}`)
+    }
+  }
+
+  // persistMeta used to be a fire-and-forget upsert; preserve that
+  // semantic so the test handler can keep calling it without await
+  // errors leaking out. We just log failures to the inline message.
   const persistMeta = async (key: string, value: string | null) => {
-    await supabase
-      .from('site_settings')
-      .upsert({ key, value }, { onConflict: 'key' })
+    try {
+      await persistSetting(key, value)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setMessage(`Failed to persist ${key}: ${msg}`)
+    }
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -2290,16 +2410,15 @@ function ZapierConfigModal({ onClose }: { onClose: () => void }) {
       return
     }
 
-    const { error } = await supabase
-      .from('site_settings')
-      .upsert({ key: 'zapier_webhook_url', value: value || '' }, { onConflict: 'key' })
-
-    setSaving(false)
-    if (error) {
-      setMessage(`Failed to save: ${error.message}`)
-    } else {
+    try {
+      await persistSetting('zapier_webhook_url', value)
       setInitialUrl(value)
       setMessage(value ? 'Webhook saved.' : 'Webhook cleared.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setMessage(`Failed to save: ${msg}`)
+    } finally {
+      setSaving(false)
       setTimeout(() => setMessage(''), 3000)
     }
   }
@@ -2307,16 +2426,16 @@ function ZapierConfigModal({ onClose }: { onClose: () => void }) {
   const handleClear = async () => {
     setSaving(true)
     setMessage('')
-    const { error } = await supabase
-      .from('site_settings')
-      .upsert({ key: 'zapier_webhook_url', value: '' }, { onConflict: 'key' })
-    setSaving(false)
-    if (error) {
-      setMessage(`Failed to clear: ${error.message}`)
-    } else {
+    try {
+      await persistSetting('zapier_webhook_url', '')
       setWebhookUrl('')
       setInitialUrl('')
       setMessage('Webhook cleared.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setMessage(`Failed to clear: ${msg}`)
+    } finally {
+      setSaving(false)
       setTimeout(() => setMessage(''), 3000)
     }
   }
@@ -2528,15 +2647,17 @@ function TestimonialsEditor() {
   }, [])
 
   const fetchTestimonials = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data } = await supabase
-      .from('testimonials')
-      .select('*')
-      .eq('is_active', true)
-    setTestimonials(data || [])
+    // Use the admin-gated GET on /api/testimonials so the anon
+    // Supabase client never has to read from a server-side-gated
+    // table directly. The route is admin-only, so credentials must
+    // be included so the session cookie rides along.
+    const res = await fetch('/api/testimonials?all=1', { credentials: 'include' })
+    const data = await res.json()
+    if (!res.ok) {
+      setTestimonials([])
+    } else {
+      setTestimonials(Array.isArray(data) ? data : [])
+    }
     setLoading(false)
   }
 
@@ -2544,20 +2665,25 @@ function TestimonialsEditor() {
     e.preventDefault()
     setSaving(true)
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const payload = {
+      name: form.name,
+      quote: form.quote,
+      role: form.role,
+      is_active: true,
+    }
 
-    if (editingId) {
-      await supabase
-        .from('testimonials')
-        .update({ name: form.name, quote: form.quote, role: form.role })
-        .eq('id', editingId)
-    } else {
-      await supabase
-        .from('testimonials')
-        .insert([{ name: form.name, quote: form.quote, role: form.role }])
+    const res = await fetch('/api/testimonials', {
+      method: editingId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(editingId ? { id: editingId, ...payload } : payload),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to save: ${data.error || `HTTP ${res.status}`}`)
+      setSaving(false)
+      return
     }
 
     setForm({ name: '', quote: '', role: '' })
@@ -2571,14 +2697,17 @@ function TestimonialsEditor() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this testimonial?')) return
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    await supabase
-      .from('testimonials')
-      .update({ is_active: false })
-      .eq('id', id)
+    const res = await fetch('/api/testimonials', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to delete: ${data.error || `HTTP ${res.status}`}`)
+      return
+    }
     fetchTestimonials()
   }
 
@@ -2708,15 +2837,19 @@ function PodcastEditor() {
   }, [])
 
   const fetchEpisodes = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data } = await supabase
-      .from('podcast_episodes')
-      .select('*')
-      .order('episode_number', { ascending: true })
-    setEpisodes(data || [])
+    // Use the admin-gated GET on /api/podcast?all=1 so the anon
+    // Supabase client never has to read from a server-side-gated
+    // table directly. The route is admin-only, so credentials must
+    // be included so the session cookie rides along.
+    const res = await fetch('/api/podcast?all=1', { credentials: 'include' })
+    const data = await res.json()
+    if (!res.ok) {
+      setEpisodes([])
+    } else {
+      const list = Array.isArray(data) ? data : []
+      list.sort((a: any, b: any) => (a.episode_number ?? 0) - (b.episode_number ?? 0))
+      setEpisodes(list)
+    }
     setLoading(false)
   }
 
@@ -2724,27 +2857,26 @@ function PodcastEditor() {
     e.preventDefault()
     setSaving(true)
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-
     const payload = {
       title: form.title,
       description: form.description,
       youtube_url: form.youtube_url,
       episode_number: parseInt(form.episode_number) || null,
+      is_visible: true,
     }
 
-    if (editingId) {
-      await supabase
-        .from('podcast_episodes')
-        .update(payload)
-        .eq('id', editingId)
-    } else {
-      await supabase
-        .from('podcast_episodes')
-        .insert([payload])
+    const res = await fetch('/api/podcast', {
+      method: editingId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(editingId ? { id: editingId, ...payload } : payload),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to save: ${data.error || `HTTP ${res.status}`}`)
+      setSaving(false)
+      return
     }
 
     setForm({ title: '', description: '', youtube_url: '', episode_number: '' })
@@ -2758,26 +2890,32 @@ function PodcastEditor() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this episode?')) return
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    await supabase
-      .from('podcast_episodes')
-      .delete()
-      .eq('id', id)
+    const res = await fetch('/api/podcast', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to delete: ${data.error || `HTTP ${res.status}`}`)
+      return
+    }
     fetchEpisodes()
   }
 
   const handleToggleVisibility = async (episode: any) => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    await supabase
-      .from('podcast_episodes')
-      .update({ is_visible: !episode.is_visible })
-      .eq('id', episode.id)
+    const res = await fetch('/api/podcast', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: episode.id, is_visible: !episode.is_visible }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Failed to update: ${data.error || `HTTP ${res.status}`}`)
+      return
+    }
     fetchEpisodes()
   }
 

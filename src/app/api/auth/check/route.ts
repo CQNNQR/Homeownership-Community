@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/admin'
+import { getServerClient } from '@/lib/admin'
 
 export async function GET() {
-  const user = await getCurrentUser()
+  // Read the session via the SSR cookie-aware client and verify the JWT
+  // belongs to an admin (app_metadata.role === 'admin'). Always returns
+  // 200 — the client decides what to do when isAdmin is false. This
+  // prevents the editor's checkAuth useEffect from blowing up on
+  // missing auth (e.g. during cold start or a logged-out visit).
+  const supabase = await getServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ isAdmin: false, user: null })
