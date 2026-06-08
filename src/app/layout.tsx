@@ -5,6 +5,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'The Home Ownership Community | Real Estate Investing & Homeownership Education',
   description: 'The Home Ownership Community is a growing network dedicated to helping future homeowners, real estate investors, and aspiring landlords build wealth through ownership. Join a community built on one principle: We Create Owners.',
+  icons: {
+    icon: [{ url: '/icon.png', type: 'image/png' }],
+  },
   keywords: [
     'Home Ownership Community',
     'Homeownership Education',

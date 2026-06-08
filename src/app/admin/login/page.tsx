@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 
 export default function AdminLoginPage() {
+  const router = useRouter()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -52,7 +55,14 @@ export default function AdminLoginPage() {
         return
       }
 
-      window.location.href = '/admin'
+      // Use router.push instead of window.location.href so this is an SPA
+      // navigation. A hard reload can tear down the page mid-flight while
+      // Supabase SSR / dev-time extension messages are still pending, which
+      // surfaces as: "A listener indicated an asynchronous response by
+      // returning true, but the message channel closed before a response
+      // was received." router.push keeps the page lifecycle clean and lets
+      // the middleware re-run the auth check on the way to /admin.
+      router.push('/admin')
     } catch (err) {
       console.error('Login error:', err)
       setError('Connection failed. Please try again.')
