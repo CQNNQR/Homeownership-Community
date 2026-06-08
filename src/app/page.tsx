@@ -6,6 +6,7 @@ import EventsPreview from '@/components/EventsPreview'
 import TestimonialsPreview from '@/components/TestimonialsPreview'
 import BooksPreview from '@/components/BooksPreview'
 import { getSettings } from '@/lib/settings'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 // Revalidate every 10 seconds to keep blog fresh
 export const revalidate = 10
@@ -77,7 +78,7 @@ export default async function Home() {
           {/* Main Headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
             {settings.hero_title ? (
-              <span dangerouslySetInnerHTML={{ __html: settings.hero_title }} />
+              <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(settings.hero_title) }} />
             ) : (
               <>
                 Build <span className="text-red-500">Generational Wealth</span> Through <span className="text-red-500">Real Estate Ownership</span>

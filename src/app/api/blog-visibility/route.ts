@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServerClient, getServiceRoleClient } from '@/lib/admin'
 
 // Helper to fetch from WordPress
 async function fetchWordPressPosts() {
@@ -17,10 +17,7 @@ async function fetchWordPressPosts() {
 }
 
 export async function GET() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getServiceRoleClient() ?? (await getServerClient())
 
   // Get visibility settings from our DB
   const { data: visibilityData } = await supabase
@@ -56,10 +53,18 @@ export async function GET() {
 
 // Sync posts from WordPress and update visibility
 export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const authSupabase = await getServerClient()
+  const { data: { user } } = await authSupabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (user.app_metadata?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const supabase = getServiceRoleClient() ?? authSupabase
 
   const { wordpress_id, slug, title, action } = await request.json()
 

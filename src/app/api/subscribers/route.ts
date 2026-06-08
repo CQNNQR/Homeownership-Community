@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServerClient, getServiceRoleClient } from '@/lib/admin'
 
 export async function GET() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const authSupabase = await getServerClient()
+  const { data: { user } } = await authSupabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (user.app_metadata?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const supabase = getServiceRoleClient() ?? authSupabase
 
   const { data, error } = await supabase
     .from('subscribers')
@@ -21,10 +29,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getServiceRoleClient() ?? (await getServerClient())
 
   const { email } = await request.json()
 

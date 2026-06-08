@@ -7,3 +7,5 @@ build
 *.log
 .env*.local
 test-results/
+playwright-report/
+tsconfig.tsbuildinfo

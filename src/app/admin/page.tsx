@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 
 export default function SiteEditor() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ email: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('settings')
 
@@ -51,21 +51,25 @@ export default function SiteEditor() {
   const [saveMessage, setSaveMessage] = useState('')
 
   useEffect(() => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/check')
+        const data = await res.json()
+        if (!data.user) {
+          window.location.href = '/admin/login'
+          return
+        }
+        if (!data.isAdmin) {
+          window.location.href = '/'
+          return
+        }
+        setUser(data.user)
+        setLoading(false)
+      } catch {
         window.location.href = '/admin/login'
-        return
       }
-      setUser(user)
-      setLoading(false)
     }
-    getUser()
+    checkAuth()
   }, [])
 
   // Fetch settings when section changes
@@ -765,16 +769,41 @@ function BooksManager() {
   )
 }
 
-// Blog Manager Component - Focus on visibility management
+// Blog Manager Component - Visibility + Local CRUD
 function BlogManager() {
+  const [blogTab, setBlogTab] = useState<'wordpress' | 'local'>('wordpress')
+
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([])
   const [selectAll, setSelectAll] = useState(false)
 
+  const [localPosts, setLocalPosts] = useState<any[]>([])
+  const [localLoading, setLocalLoading] = useState(true)
+  const [showLocalForm, setShowLocalForm] = useState(false)
+  const [editingLocalId, setEditingLocalId] = useState<string | null>(null)
+  const [localSaving, setLocalSaving] = useState(false)
+  const [localError, setLocalError] = useState('')
+  const emptyLocalForm = {
+    title: '',
+    slug: '',
+    excerpt: '',
+    content: '',
+    featured_image_url: '',
+    author_name: 'Brandon Bee Dixon',
+    category: 'General',
+    tagsString: '',
+    reading_time_minutes: 5,
+    is_published: false,
+    is_featured: false,
+    published_at: '',
+  }
+  const [localForm, setLocalForm] = useState(emptyLocalForm)
+
   useEffect(() => {
     fetchPosts()
+    fetchLocalPosts()
   }, [])
 
   const fetchPosts = async () => {
@@ -786,6 +815,24 @@ function BlogManager() {
       console.error('Error fetching posts:', err)
     }
     setLoading(false)
+  }
+
+  const fetchLocalPosts = async () => {
+    try {
+      const response = await fetch('/api/blog-posts?all=true')
+      const data = await response.json()
+      if (!response.ok) {
+        setLocalError(data?.error || 'Failed to load posts')
+        setLocalPosts([])
+      } else {
+        setLocalError('')
+        setLocalPosts(data || [])
+      }
+    } catch (err: any) {
+      setLocalError(err?.message || 'Failed to load posts')
+      setLocalPosts([])
+    }
+    setLocalLoading(false)
   }
 
   const syncPosts = async () => {
@@ -882,6 +929,124 @@ function BlogManager() {
     alert('Selected posts shown!')
   }
 
+  const slugify = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+
+  const openLocalForm = (post: any = null) => {
+    if (post) {
+      setLocalForm({
+        title: post.title || '',
+        slug: post.slug || '',
+        excerpt: post.excerpt || '',
+        content: post.content || '',
+        featured_image_url: post.featured_image_url || '',
+        author_name: post.author_name || 'Brandon Bee Dixon',
+        category: post.category || 'General',
+        tagsString: Array.isArray(post.tags) ? post.tags.join(', ') : '',
+        reading_time_minutes: post.reading_time_minutes ?? 5,
+        is_published: !!post.is_published,
+        is_featured: !!post.is_featured,
+        published_at: post.published_at ? post.published_at.slice(0, 16) : '',
+      })
+      setEditingLocalId(post.id)
+    } else {
+      setLocalForm(emptyLocalForm)
+      setEditingLocalId(null)
+    }
+    setLocalError('')
+    setShowLocalForm(true)
+  }
+
+  const closeLocalForm = () => {
+    setShowLocalForm(false)
+    setEditingLocalId(null)
+    setLocalError('')
+  }
+
+  const handleLocalTitleChange = (value: string) => {
+    setLocalForm(prev => {
+      const auto = !prev.slug || prev.slug === slugify(prev.title)
+      const next = { ...prev, title: value }
+      if (auto) next.slug = slugify(value)
+      return next
+    })
+  }
+
+  const handleLocalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLocalSaving(true)
+    setLocalError('')
+
+    const tags = localForm.tagsString
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
+
+    const payload: any = {
+      title: localForm.title,
+      slug: localForm.slug.trim() || undefined,
+      excerpt: localForm.excerpt.trim() || null,
+      content: localForm.content,
+      featured_image_url: localForm.featured_image_url.trim() || null,
+      author_name: localForm.author_name.trim() || 'Brandon Bee Dixon',
+      category: localForm.category.trim() || 'General',
+      tags,
+      reading_time_minutes: Number(localForm.reading_time_minutes) || 5,
+      is_published: localForm.is_published,
+      is_featured: localForm.is_featured,
+      published_at: localForm.published_at
+        ? new Date(localForm.published_at).toISOString()
+        : null,
+    }
+
+    if (editingLocalId) {
+      payload.id = editingLocalId
+    }
+
+    try {
+      const response = await fetch('/api/blog-posts', {
+        method: editingLocalId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setLocalError(data?.error || 'Failed to save post')
+        setLocalSaving(false)
+        return
+      }
+      closeLocalForm()
+      await fetchLocalPosts()
+    } catch (err: any) {
+      setLocalError(err?.message || 'Failed to save post')
+    } finally {
+      setLocalSaving(false)
+    }
+  }
+
+  const handleLocalDelete = async (id: string) => {
+    if (!confirm('Delete this blog post? This cannot be undone.')) return
+    setLocalError('')
+    try {
+      const response = await fetch('/api/blog-posts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setLocalError(data?.error || 'Failed to delete post')
+        return
+      }
+      await fetchLocalPosts()
+    } catch (err: any) {
+      setLocalError(err?.message || 'Failed to delete post')
+    }
+  }
+
   const categories = [...new Set(posts.map(p => p.category).filter(Boolean))]
   const filteredPosts = posts.filter(p =>
     p.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -890,107 +1055,375 @@ function BlogManager() {
 
   const visibleCount = posts.filter(p => p.is_visible).length
 
-  if (loading) return <div className="text-center py-8">Loading...</div>
+  const publishedCount = localPosts.filter(p => p.is_published).length
+  const draftCount = localPosts.length - publishedCount
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-black">Blog Visibility</h2>
-            <button
-              onClick={syncPosts}
-              className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3 py-1 rounded-lg text-xs transition-colors"
-            >
-              Sync from WordPress
-            </button>
-          </div>
-          <p className="text-sm text-gray-500">{visibleCount} of {posts.length} posts visible on site</p>
-        </div>
-        {selectedIds.length > 0 && (
-          <div className="flex gap-2">
-            <button onClick={bulkHide} className="bg-gray-700 hover:bg-gray-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
-              Hide Selected ({selectedIds.length})
-            </button>
-            <button onClick={bulkShow} className="bg-green-700 hover:bg-green-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
-              Show Selected
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Search */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search posts by title or category..."
-          className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
-        />
-      </div>
-
-      {/* Category Filter Pills */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setSearch('')}
-          className={`px-3 py-1 rounded-full text-sm font-medium ${search === '' ? 'bg-red-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-        >
-          All ({posts.length})
-        </button>
-        {categories.map(cat => (
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-2 flex-wrap">
           <button
-            key={cat}
-            onClick={() => setSearch(cat)}
-            className={`px-3 py-1 rounded-full text-sm font-medium ${search === cat ? 'bg-red-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            type="button"
+            onClick={() => setBlogTab('wordpress')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              blogTab === 'wordpress'
+                ? 'border-red-700 text-red-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
           >
-            {cat} ({posts.filter(p => p.category === cat).length})
+            WordPress Visibility
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setBlogTab('local')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              blogTab === 'local'
+                ? 'border-red-700 text-red-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Local Blog Posts
+          </button>
+        </nav>
       </div>
 
-      {/* Posts List */}
-      <div className="space-y-2">
-        {filteredPosts.length === 0 && (
-          <p className="text-gray-500 text-center py-8">No posts found</p>
-        )}
-        {filteredPosts.map((post) => (
-          <div key={post.wordpress_id} className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4">
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(post.wordpress_id)}
-              onChange={() => toggleSelect(post.wordpress_id)}
-              className="w-4 h-4 text-red-700 rounded"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${post.is_visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {post.is_visible ? 'Visible' : 'Hidden'}
-                </span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{post.category}</span>
+      {blogTab === 'wordpress' && (
+        <div className="space-y-6">
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : (
+            <>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-bold text-black">Blog Visibility</h2>
+                    <button
+                      onClick={syncPosts}
+                      className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3 py-1 rounded-lg text-xs transition-colors"
+                    >
+                      Sync from WordPress
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500">{visibleCount} of {posts.length} posts visible on site</p>
+                </div>
+                {selectedIds.length > 0 && (
+                  <div className="flex gap-2">
+                    <button onClick={bulkHide} className="bg-gray-700 hover:bg-gray-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
+                      Hide Selected ({selectedIds.length})
+                    </button>
+                    <button onClick={bulkShow} className="bg-green-700 hover:bg-green-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
+                      Show Selected
+                    </button>
+                  </div>
+                )}
               </div>
-              <p className="font-medium text-black truncate" dangerouslySetInnerHTML={{ __html: post.title }} />
+
+              <div className="bg-white rounded-xl shadow p-4">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search posts by title or category..."
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSearch('')}
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${search === '' ? 'bg-red-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  All ({posts.length})
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSearch(cat)}
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${search === cat ? 'bg-red-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  >
+                    {cat} ({posts.filter(p => p.category === cat).length})
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                {filteredPosts.length === 0 && (
+                  <p className="text-gray-500 text-center py-8">No posts found</p>
+                )}
+                {filteredPosts.map((post) => (
+                  <div key={post.wordpress_id} className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(post.wordpress_id)}
+                      onChange={() => toggleSelect(post.wordpress_id)}
+                      className="w-4 h-4 text-red-700 rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${post.is_visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {post.is_visible ? 'Visible' : 'Hidden'}
+                        </span>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{post.category}</span>
+                      </div>
+                      <p className="font-medium text-black truncate" dangerouslySetInnerHTML={{ __html: post.title }} />
+                    </div>
+                    <button
+                      onClick={() => toggleVisibility(post)}
+                      className={`px-3 py-1 rounded text-sm font-medium whitespace-nowrap ${post.is_visible ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}
+                    >
+                      {post.is_visible ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {filteredPosts.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectAll && selectedIds.length === filteredPosts.length}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 text-red-700 rounded"
+                  />
+                  <span className="text-sm text-gray-600">Select all ({filteredPosts.length})</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {blogTab === 'local' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-black">Local Blog Posts</h2>
+              <p className="text-sm text-gray-500">
+                {localLoading ? 'Loading…' : `${publishedCount} published, ${draftCount} draft${draftCount === 1 ? '' : 's'} of ${localPosts.length}`}
+              </p>
             </div>
             <button
-              onClick={() => toggleVisibility(post)}
-              className={`px-3 py-1 rounded text-sm font-medium whitespace-nowrap ${post.is_visible ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}
+              type="button"
+              onClick={() => openLocalForm()}
+              className="bg-red-700 hover:bg-red-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
             >
-              {post.is_visible ? 'Hide' : 'Show'}
+              + Add Post
             </button>
           </div>
-        ))}
-      </div>
 
-      {/* Select All */}
-      {filteredPosts.length > 0 && (
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={selectAll && selectedIds.length === filteredPosts.length}
-            onChange={toggleSelectAll}
-            className="w-4 h-4 text-red-700 rounded"
-          />
-          <span className="text-sm text-gray-600">Select all ({filteredPosts.length})</span>
+          {localError && (
+            <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3 text-sm">
+              {localError}
+            </div>
+          )}
+
+          {showLocalForm && (
+            <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+              <h3 className="text-lg font-bold text-black mb-4">
+                {editingLocalId ? 'Edit Post' : 'New Post'}
+              </h3>
+              <form onSubmit={handleLocalSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={localForm.title}
+                    onChange={(e) => handleLocalTitleChange(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                    placeholder="Post title..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                    <input
+                      type="text"
+                      value={localForm.slug}
+                      onChange={(e) => setLocalForm({ ...localForm, slug: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                      placeholder="auto-generated-from-title"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave blank to auto-generate from title.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <input
+                      type="text"
+                      value={localForm.category}
+                      onChange={(e) => setLocalForm({ ...localForm, category: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                      placeholder="General"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Excerpt</label>
+                  <textarea
+                    rows={2}
+                    value={localForm.excerpt}
+                    onChange={(e) => setLocalForm({ ...localForm, excerpt: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                    placeholder="Short summary shown in the blog list..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+                  <textarea
+                    required
+                    rows={8}
+                    value={localForm.content}
+                    onChange={(e) => setLocalForm({ ...localForm, content: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700 font-mono text-sm"
+                    placeholder="Write your post (markdown / HTML)..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Author Name</label>
+                    <input
+                      type="text"
+                      value={localForm.author_name}
+                      onChange={(e) => setLocalForm({ ...localForm, author_name: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                      placeholder="Brandon Bee Dixon"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Featured Image URL</label>
+                    <input
+                      type="url"
+                      value={localForm.featured_image_url}
+                      onChange={(e) => setLocalForm({ ...localForm, featured_image_url: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                    <input
+                      type="text"
+                      value={localForm.tagsString}
+                      onChange={(e) => setLocalForm({ ...localForm, tagsString: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                      placeholder="real-estate, first-time-buyer"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reading Time (minutes)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={localForm.reading_time_minutes}
+                      onChange={(e) => setLocalForm({ ...localForm, reading_time_minutes: parseInt(e.target.value) || 5 })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Published At</label>
+                  <input
+                    type="datetime-local"
+                    value={localForm.published_at}
+                    onChange={(e) => setLocalForm({ ...localForm, published_at: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required when published. Defaults to now on save.</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={localForm.is_published}
+                      onChange={(e) => setLocalForm({ ...localForm, is_published: e.target.checked })}
+                      className="w-4 h-4 text-red-700 rounded"
+                    />
+                    Published
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={localForm.is_featured}
+                      onChange={(e) => setLocalForm({ ...localForm, is_featured: e.target.checked })}
+                      className="w-4 h-4 text-red-700 rounded"
+                    />
+                    Featured
+                  </label>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="submit"
+                    disabled={localSaving}
+                    className="bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+                  >
+                    {localSaving ? 'Saving...' : editingLocalId ? 'Update Post' : 'Create Post'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeLocalForm}
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {localLoading ? (
+              <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">Loading posts...</div>
+            ) : localPosts.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No posts yet. Click "Add Post" to create your first one.</p>
+            ) : (
+              localPosts.map((post) => (
+                <div key={post.id} className="bg-white rounded-xl shadow p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${post.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {post.is_published ? 'Published' : 'Draft'}
+                        </span>
+                        {post.is_featured && (
+                          <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Featured</span>
+                        )}
+                        {post.category && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{post.category}</span>
+                        )}
+                        {post.reading_time_minutes != null && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{post.reading_time_minutes} min read</span>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-black truncate">{post.title}</h3>
+                      {post.excerpt && <p className="text-sm text-gray-600 mt-1 line-clamp-2">{post.excerpt}</p>}
+                      <p className="text-xs text-gray-400 mt-1">
+                        /{post.slug}
+                        {post.published_at && ` · ${new Date(post.published_at).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => openLocalForm(post)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleLocalDelete(post.id)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -1000,14 +1433,15 @@ function BlogManager() {
 // Theme Editor Component
 function ThemeEditor() {
   const [theme, setTheme] = useState({
-    preset: 'default',
-    header_bg: '#FFFFFF',
-    header_text: '#000000',
-    footer_bg: '#F9F9F9',
-    footer_text: '#333333',
-    primary_color: '#A61C30',
-    button_text: '#FFFFFF',
+    preset: '',
+    header_bg: '',
+    header_text: '',
+    footer_bg: '',
+    footer_text: '',
+    primary_color: '',
+    button_text: '',
   })
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -1018,6 +1452,50 @@ function ThemeEditor() {
     { id: 'sunset', name: 'Sunset Orange', header_bg: '#FF6B35', header_text: '#FFFFFF', footer_bg: '#4A2C2A', footer_text: '#FFFFFF', primary_color: '#F7931E', button_text: '#FFFFFF' },
     { id: 'minimal', name: 'Minimal Black', header_bg: '#000000', header_text: '#FFFFFF', footer_bg: '#111111', footer_text: '#CCCCCC', primary_color: '#333333', button_text: '#FFFFFF' },
   ]
+
+  const defaults = {
+    preset: 'default',
+    header_bg: '#FFFFFF',
+    header_text: '#000000',
+    footer_bg: '#F9F9F9',
+    footer_text: '#333333',
+    primary_color: '#A61C30',
+    button_text: '#FFFFFF',
+  }
+
+  useEffect(() => {
+    const fetchTheme = async () => {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('key, value')
+        .in('key', [
+          'theme_preset',
+          'theme_header_bg',
+          'theme_header_text',
+          'theme_footer_bg',
+          'theme_footer_text',
+          'theme_primary_color',
+          'theme_button_text',
+        ])
+
+      if (!error && data) {
+        const fromDb: Record<string, string> = {}
+        data.forEach((item: any) => {
+          const field = item.key.replace(/^theme_/, '')
+          fromDb[field] = item.value
+        })
+        setTheme(prev => ({ ...defaults, ...prev, ...fromDb }))
+      } else {
+        setTheme(defaults)
+      }
+      setLoading(false)
+    }
+    fetchTheme()
+  }, [])
 
   // Calculate luminance to determine if text should be light or dark
   const getContrastColor = (hexColor: string) => {
@@ -1079,6 +1557,14 @@ function ThemeEditor() {
     header: { backgroundColor: theme.header_bg, color: theme.header_text },
     footer: { backgroundColor: theme.footer_bg, color: theme.footer_text },
     button: { backgroundColor: theme.primary_color, color: theme.button_text },
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow p-8 text-center">
+        <p className="text-gray-500">Loading theme settings...</p>
+      </div>
+    )
   }
 
   return (

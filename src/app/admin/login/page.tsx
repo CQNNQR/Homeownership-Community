@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -14,10 +14,7 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError('')
 
-    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-    console.log('Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-
-    const supabase = createClient(
+    const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
@@ -28,8 +25,6 @@ export default function AdminLoginPage() {
         password,
       })
 
-      console.log('Auth result:', { data, error: authError })
-
       if (authError) {
         setError(authError.message)
         setLoading(false)
@@ -37,8 +32,12 @@ export default function AdminLoginPage() {
       }
 
       if (data.user) {
-        console.log('Login successful, doing full page reload to /admin')
-        // Full page navigation so middleware can see the auth cookie
+        if (data.user.app_metadata?.role !== 'admin') {
+          await supabase.auth.signOut()
+          setError('You do not have admin access.')
+          setLoading(false)
+          return
+        }
         window.location.href = '/admin'
       }
     } catch (err) {

@@ -20,6 +20,8 @@ export default function Navigation() {
     header_bg: '#FFFFFF',
     header_text: '#000000',
   })
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
     fetch('/api/settings')
@@ -46,11 +48,27 @@ export default function Navigation() {
       .catch(() => {})
   }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Thank you for joining! We will be in touch soon.')
-    setShowModal(false)
-    setFormData({ firstName: '', lastName: '', email: '', phone: '' })
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      const res = await fetch('/api/subscribers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Something went wrong')
+      }
+      setShowModal(false)
+      setFormData({ firstName: '', lastName: '', email: '', phone: '' })
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   useEffect(() => {
@@ -118,11 +136,18 @@ export default function Navigation() {
               placeholder="(555) 123-4567"
             />
           </div>
+          {submitError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+              {submitError}
+            </div>
+          )}
           <button
             type="submit"
-            className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2"
+            disabled={submitting}
+            className="w-full text-white font-semibold py-4 rounded-lg transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: theme.primary_color }}
           >
-            Submit
+            {submitting ? 'Submitting...' : 'Submit'}
           </button>
         </form>
       </div>

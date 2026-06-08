@@ -1,6 +1,7 @@
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { getSettings } from '@/lib/settings'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 export async function generateMetadata() {
   const settings = await getSettings()
@@ -62,7 +63,7 @@ export default async function AboutPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="prose prose-lg max-w-none">
             {aboutContent ? (
-              <div dangerouslySetInnerHTML={{ __html: aboutContent }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(aboutContent) }} />
             ) : (
               <>
                 <h2 className="text-3xl font-bold text-black mb-6">The Man Behind the Mission</h2>
