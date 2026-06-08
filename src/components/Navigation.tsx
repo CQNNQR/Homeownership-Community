@@ -56,7 +56,13 @@ export default function Navigation() {
       const res = await fetch('/api/subscribers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email }),
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          source: 'nav_modal',
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))

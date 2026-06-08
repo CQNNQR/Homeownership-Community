@@ -259,6 +259,16 @@ export default function SiteEditor() {
           >
             Theme
           </button>
+          <button
+            onClick={() => setActiveSection('integrations')}
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+              activeSection === 'integrations'
+                ? 'border-red-700 text-red-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Integrations
+          </button>
         </div>
       </nav>
 
@@ -615,6 +625,11 @@ export default function SiteEditor() {
         {/* Theme Section */}
         {activeSection === 'theme' && (
           <ThemeEditor />
+        )}
+
+        {/* Integrations Section */}
+        {activeSection === 'integrations' && (
+          <IntegrationsManager />
         )}
       </main>
     </div>
@@ -2122,11 +2137,21 @@ function SubscribersManager() {
 
   const exportToCSV = () => {
     setExporting(true)
-    const rows = [['Email', 'Subscribed At', 'Status']]
+    const rows = [['First Name', 'Last Name', 'Email', 'Phone', 'Subscribed At', 'Status']]
     subscribers.forEach((sub: any) => {
-      rows.push([sub.email, new Date(sub.subscribed_at).toLocaleDateString(), sub.is_active ? 'Active' : 'Inactive'])
+      rows.push([
+        sub.first_name || '',
+        sub.last_name || '',
+        sub.email,
+        sub.phone || '',
+        new Date(sub.subscribed_at).toLocaleDateString(),
+        sub.is_active ? 'Active' : 'Inactive',
+      ])
     })
-    const csvContent = rows.map(r => r.join(',')).join('\n')
+    const csvContent = rows.map(r => r.map(cell => {
+      const s = String(cell ?? '')
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+    }).join(',')).join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -2160,7 +2185,9 @@ function SubscribersManager() {
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b">
               <tr>
+                <th className="px-4 py-3 text-sm font-medium text-gray-700">Name</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-700">Email</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-700">Phone</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-700">Subscribed</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-700">Status</th>
               </tr>
@@ -2168,20 +2195,25 @@ function SubscribersManager() {
             <tbody className="divide-y">
               {subscribers.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-gray-500">No subscribers yet</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No subscribers yet</td>
                 </tr>
               )}
-              {subscribers.map((sub: any) => (
-                <tr key={sub.id}>
-                  <td className="px-4 py-3 text-sm text-black">{sub.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{new Date(sub.subscribed_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full ${sub.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {sub.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {subscribers.map((sub: any) => {
+                const fullName = [sub.first_name, sub.last_name].filter(Boolean).join(' ')
+                return (
+                  <tr key={sub.id}>
+                    <td className="px-4 py-3 text-sm text-black">{fullName || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-black">{sub.email}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{sub.phone || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{new Date(sub.subscribed_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-1 rounded-full ${sub.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {sub.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -2600,6 +2632,254 @@ function PodcastEditor() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// Integrations Manager Component - Zapier / GoHighLevel lead transfer
+function IntegrationsManager() {
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [message, setMessage] = useState('')
+  const [testResult, setTestResult] = useState<{ ok: boolean; status?: number; error?: string; skipped?: boolean } | null>(null)
+  const [lastSentAt, setLastSentAt] = useState<string | null>(null)
+  const [lastResult, setLastResult] = useState<string | null>(null)
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  useEffect(() => {
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('key, value')
+        .in('key', ['zapier_webhook_url', 'zapier_last_sent_at', 'zapier_last_result'])
+
+      if (!error && data) {
+        for (const row of data) {
+          if (row.key === 'zapier_webhook_url') setWebhookUrl(row.value || '')
+          if (row.key === 'zapier_last_sent_at') setLastSentAt(row.value || null)
+          if (row.key === 'zapier_last_result') setLastResult(row.value || null)
+        }
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const persistMeta = async (key: string, value: string | null) => {
+    await supabase
+      .from('site_settings')
+      .upsert({ key, value }, { onConflict: 'key' })
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    setMessage('')
+
+    const value = webhookUrl.trim()
+    if (value && !/^https?:\/\//i.test(value)) {
+      setMessage('Webhook URL must start with http:// or https://')
+      setSaving(false)
+      return
+    }
+
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert({ key: 'zapier_webhook_url', value: value || '' }, { onConflict: 'key' })
+
+    setSaving(false)
+    if (error) {
+      setMessage(`Failed to save: ${error.message}`)
+    } else {
+      setMessage(value ? 'Webhook saved.' : 'Webhook cleared.')
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
+
+  const handleClear = async () => {
+    setSaving(true)
+    setMessage('')
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert({ key: 'zapier_webhook_url', value: '' }, { onConflict: 'key' })
+    setSaving(false)
+    if (error) {
+      setMessage(`Failed to clear: ${error.message}`)
+    } else {
+      setWebhookUrl('')
+      setMessage('Webhook cleared.')
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
+
+  const handleTest = async () => {
+    const value = webhookUrl.trim()
+    if (!value) {
+      setTestResult({ ok: false, error: 'No webhook URL configured. Save a URL first.' })
+      return
+    }
+    if (!/^https?:\/\//i.test(value)) {
+      setTestResult({ ok: false, error: 'Webhook URL must start with http:// or https://' })
+      return
+    }
+
+    setTesting(true)
+    setTestResult(null)
+    setMessage('')
+
+    const payload = {
+      email: 'test@example.com',
+      first_name: 'Test',
+      last_name: 'Lead',
+      phone: '+15555550100',
+      source: 'admin_test',
+      created_at: new Date().toISOString(),
+      note: 'This is a test lead from the Homeownership Community admin.',
+    }
+
+    try {
+      const res = await fetch(value, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const text = await res.text().catch(() => '')
+      const result = {
+        ok: res.ok,
+        status: res.status,
+        error: res.ok ? undefined : (text || `HTTP ${res.status}`),
+      }
+      setTestResult(result)
+      const nowIso = new Date().toISOString()
+      setLastSentAt(nowIso)
+      setLastResult(res.ok ? `OK (${res.status})` : `Failed (${res.status})`)
+      await persistMeta('zapier_last_sent_at', nowIso)
+      await persistMeta('zapier_last_result', res.ok ? `OK (${res.status})` : `Failed (${res.status})`)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      setTestResult({ ok: false, error: errorMsg })
+      const nowIso = new Date().toISOString()
+      setLastSentAt(nowIso)
+      setLastResult(`Error: ${errorMsg}`)
+      await persistMeta('zapier_last_sent_at', nowIso)
+      await persistMeta('zapier_last_result', `Error: ${errorMsg}`)
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  if (loading) return <div className="text-center py-8">Loading...</div>
+
+  const isConfigured = webhookUrl.trim().length > 0
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-bold text-black">Integrations</h2>
+        <p className="text-sm text-gray-500">Send new subscriber leads to other tools (Zapier, GoHighLevel, etc.)</p>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-black">Zapier Webhook</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Connect to GoHighLevel (or any other CRM) by pasting a Zapier &ldquo;Catch Hook&rdquo; URL below.
+              Every new email subscriber will be POSTed to this URL with their name, email, phone, and source.
+            </p>
+          </div>
+          <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${isConfigured ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+            {isConfigured ? 'Connected' : 'Not configured'}
+          </span>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Webhook URL</label>
+            <input
+              type="url"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 font-mono text-sm"
+              placeholder="https://hooks.zapier.com/hooks/catch/12345678/abcdefgh/"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Get this from Zapier: create a Zap with &ldquo;Webhooks by Zapier&rdquo; (Catch Hook) as the trigger, then add a GoHighLevel &ldquo;Create Contact&rdquo; action mapped to the fields below.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+            >
+              {saving ? 'Saving...' : 'Save Webhook'}
+            </button>
+            <button
+              type="button"
+              onClick={handleTest}
+              disabled={testing || !isConfigured}
+              className="bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+            >
+              {testing ? 'Sending Test...' : 'Send Test Lead'}
+            </button>
+            {isConfigured && (
+              <button
+                type="button"
+                onClick={handleClear}
+                disabled={saving}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {message && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm">
+              {message}
+            </div>
+          )}
+
+          {testResult && (
+            <div className={`px-4 py-3 rounded-lg text-sm ${testResult.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+              {testResult.ok
+                ? `Test lead sent successfully${testResult.status ? ` (HTTP ${testResult.status})` : ''}. Check your Zap or GoHighLevel for the contact.`
+                : `Test failed${testResult.status ? ` (HTTP ${testResult.status})` : ''}: ${testResult.error || 'Unknown error'}`}
+            </div>
+          )}
+        </form>
+
+        {(lastSentAt || lastResult) && (
+          <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500 space-y-1">
+            {lastSentAt && <p>Last test: {new Date(lastSentAt).toLocaleString()}</p>}
+            {lastResult && <p>Last result: <span className={lastResult.startsWith('OK') ? 'text-green-700' : 'text-red-700'}>{lastResult}</span></p>}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+        <h3 className="text-lg font-bold text-black mb-2">Payload sent to Zapier</h3>
+        <p className="text-sm text-gray-500 mb-4">When a new subscriber is added, the following JSON is POSTed to your webhook URL.</p>
+        <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto font-mono">{`{
+  "email": "jane@example.com",
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "phone": "+15555550100",
+  "source": "nav_modal",
+  "created_at": "2026-06-08T15:30:00.000Z"
+}`}</pre>
+        <p className="text-xs text-gray-500 mt-3">
+          <code className="bg-gray-100 px-1 rounded">source</code> is <code className="bg-gray-100 px-1 rounded">nav_modal</code> for the navigation &ldquo;Join Community&rdquo; form. Map it to a custom field in GoHighLevel if you want to track lead source.
+        </p>
       </div>
     </div>
   )

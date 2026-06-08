@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerClient, getServiceRoleClient } from '@/lib/admin'
+import { sendToZapier } from '@/lib/zapier'
 
 export async function GET() {
   const authSupabase = await getServerClient()
@@ -31,7 +32,12 @@ export async function GET() {
 export async function POST(request: Request) {
   const supabase = getServiceRoleClient() ?? (await getServerClient())
 
-  const { email } = await request.json()
+  const body = await request.json()
+  const email: string | undefined = body?.email
+  const firstName: string | null = body?.firstName ? String(body.firstName).trim() : null
+  const lastName: string | null = body?.lastName ? String(body.lastName).trim() : null
+  const phone: string | null = body?.phone ? String(body.phone).trim() : null
+  const source: string = body?.source ? String(body.source) : 'unknown'
 
   if (!email || !email.includes('@')) {
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 })
@@ -39,17 +45,25 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from('subscribers')
-    .insert([{ email }])
+    .insert([{ email, first_name: firstName, last_name: lastName, phone }])
     .select()
     .single()
 
   if (error) {
-    // Ignore duplicate email errors
     if (error.code === '23505') {
       return NextResponse.json({ message: 'Already subscribed' }, { status: 200 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  sendToZapier({
+    email,
+    first_name: firstName,
+    last_name: lastName,
+    phone,
+    source,
+    created_at: new Date().toISOString(),
+  }).catch(err => console.error('Zapier webhook error:', err))
 
   return NextResponse.json(data)
 }
