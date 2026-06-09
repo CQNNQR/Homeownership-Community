@@ -7,6 +7,7 @@ import { normalizePost, stripHtml } from '@/lib/utils'
 
 // Revalidate every 10 seconds to keep blog fresh
 export const revalidate = 10
+export const dynamic = 'force-dynamic'
 
 interface Props {
   params: Promise<{ slug: string }>

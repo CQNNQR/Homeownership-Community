@@ -3,6 +3,8 @@ import Footer from '@/components/Footer'
 import { getSettings } from '@/lib/settings'
 import { sanitizeHtml } from '@/lib/sanitize'
 
+export const dynamic = 'force-dynamic'
+
 export async function generateMetadata() {
   const settings = await getSettings()
   return {
