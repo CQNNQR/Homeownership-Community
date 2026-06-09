@@ -9,13 +9,6 @@ import { sanitizeHtml } from '@/lib/sanitize'
 
 // Revalidate every 10 seconds to keep blog fresh
 export const revalidate = 10
-// Force dynamic rendering. The Vercel build environment is
-// sometimes unable to reach Supabase during the static prerender
-// step (DNS / egress policy), which can fail the build. Skipping
-// the prerender means the function runs on the first request and
-// then revalidates every 10s, which is fine for a low-traffic
-// site and is no slower in practice than the previous ISR flow.
-export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
   const settings = await getSettings()

@@ -4,7 +4,6 @@ import { getSettings } from '@/lib/settings'
 import { getPodcastEpisodes } from '@/lib/settings'
 
 export const revalidate = 10
-export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
   const settings = await getSettings()
