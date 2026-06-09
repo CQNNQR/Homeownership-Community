@@ -24,7 +24,7 @@ export default function Navigation() {
   const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data) {
@@ -38,7 +38,7 @@ export default function Navigation() {
       .catch(() => {})
 
     // Check if there are visible podcasts
-    fetch('/api/podcast')
+    fetch('/api/podcast', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {

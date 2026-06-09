@@ -7,6 +7,38 @@
 
 ---
 
+## Site Editor Incident (June 9, 2026)
+
+### Symptoms
+- Admin login worked, but production saves from the Site Editor did not persist.
+- Browser console on production showed repeated 401 responses and RLS errors (`new row violates row-level security policy for table "site_settings"`).
+
+### Deep-Dive Findings
+1. Playwright reproduction against production (`https://homeownership-community.vercel.app`) failed on settings-save confirmation.
+2. Instrumented browser run showed no `POST /api/settings` request on save in production.
+3. Production admin bundle scan showed deprecated markers (`Error saving`, `contact_email`, `site_settings`) and did not show `/api/settings` save-path markers.
+4. Localhost reproduction with the current repo code passed login + save (`E2E_BASE_URL=http://localhost:3000`).
+5. Vercel logs showed production traffic on deployment `dpl_B7AA72SMGkJ5a2RzeLxcRjGDqpED`, while preview traffic was on a different deployment ID.
+
+### Root Cause
+- The production alias is serving a stale admin bundle that still uses deprecated direct writes to `site_settings` with anonymous auth context.
+- Those direct writes are blocked by hardened RLS, so edits fail.
+- The current repository code uses admin-gated API routes (`/api/settings`), but that code path is not what production is currently serving.
+
+### Remediation Completed (Code)
+- [x] Force dynamic, non-cached settings reads in `GET /api/settings`.
+- [x] Trigger immediate revalidation of affected pages after `POST /api/settings`.
+- [x] Force client `Navigation` and `Footer` settings fetches to use `cache: 'no-store'`.
+- [x] Harden settings-save Playwright assertions to target the save banner test id instead of exact full text.
+- [x] Default editor integration suites to localhost to prevent accidental writes to production unless `E2E_BASE_URL` is explicitly set.
+
+### Required Deployment Follow-up
+- [ ] Promote/redeploy latest `master` commit to production alias.
+- [ ] Verify production admin bundle no longer includes deprecated `Error saving ... site_settings` logic.
+- [ ] Smoke test production: login -> edit Site Name -> save -> verify update on homepage and about page.
+
+---
+
 ## Setup Phase (Completed)
 
 - [x] Create GitHub repository "Homeownership-Community"

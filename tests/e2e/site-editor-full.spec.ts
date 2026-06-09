@@ -2,12 +2,11 @@ import { test, expect, chromium, Page } from '@playwright/test'
 
 const ADMIN_EMAIL = 'admin@hoc.com'
 const ADMIN_PASSWORD = '!Texas1995'
-const BASE_URL = 'https://homeownership-community.vercel.app'
 const LOCAL_URL = 'http://localhost:3000'
 
-// Helper to check if running on Vercel or local
+// Runs local by default. Set E2E_BASE_URL to target a remote deployment.
 const getBaseUrl = () => {
-  return process.env.E2E_BASE_URL || BASE_URL
+  return process.env.E2E_BASE_URL || LOCAL_URL
 }
 
 // Store original values for reset
@@ -179,7 +178,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.waitForTimeout(2000)
 
       // Check success message
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
 
       // Verify on live site - wait for ISR revalidation (up to 15 seconds)
       const homePage = await page.context().newPage()
@@ -201,7 +200,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="Your site description"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Meta Title - should save and reflect in page head', async ({ page }) => {
@@ -211,7 +210,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="Your site title for Google"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(3000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Meta Description - should save', async ({ page }) => {
@@ -219,7 +218,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('textarea[placeholder="Brief description for search results..."]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Hero Image URL - should save', async ({ page }) => {
@@ -227,7 +226,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="https://images.unsplash.com/..."]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('CTA Button Text - should save and reflect on homepage', async ({ page }) => {
@@ -235,7 +234,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="Start Your Journey"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
 
       // Verify on live site - wait for ISR revalidation
       const homePage = await page.context().newPage()
@@ -253,7 +252,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="Get My Book"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Blog Section Title - should save and reflect on homepage', async ({ page }) => {
@@ -261,7 +260,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="Latest from the Blog"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
 
       // Verify on live site - wait for ISR revalidation
       const homePage = await page.context().newPage()
@@ -279,7 +278,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="Join the Community"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Opt-in Modal Message - should save', async ({ page }) => {
@@ -287,7 +286,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('textarea[placeholder="Fill out the form below..."]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('About Page Title - should save and reflect on about page', async ({ page }) => {
@@ -295,7 +294,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="About Brandon Bee Dixon"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
 
       // Verify on live site - wait for ISR revalidation
       const aboutPage = await page.context().newPage()
@@ -313,7 +312,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="brandon@hocmortgage.com"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Podcast URL - should save', async ({ page }) => {
@@ -321,7 +320,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="https://youtube.com/@channel"]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Footer Mission - should save and reflect on homepage', async ({ page }) => {
@@ -329,7 +328,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('textarea[placeholder="Your mission statement..."]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
 
       // Verify on live site - wait for ISR revalidation
       const homePage = await page.context().newPage()
@@ -347,7 +346,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="https://facebook.com/..."]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Instagram URL - should save', async ({ page }) => {
@@ -355,7 +354,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="https://instagram.com/..."]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('LinkedIn URL - should save', async ({ page }) => {
@@ -363,7 +362,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="https://linkedin.com/in/..."]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
 
     test('Twitter URL - should save', async ({ page }) => {
@@ -371,7 +370,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.fill('input[placeholder="https://x.com/..."]', testValue)
       await page.click('button:has-text("Save Settings")')
       await page.waitForTimeout(2000)
-      await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
     })
   })
 

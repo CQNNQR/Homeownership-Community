@@ -23,7 +23,7 @@ test.setTimeout(120000)
 
 const ADMIN_EMAIL = 'admin@hoc.com'
 const ADMIN_PASSWORD = '!Texas1995'
-const BASE_URL = process.env.E2E_BASE_URL || 'https://homeownership-community.vercel.app'
+const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3000'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -68,7 +68,7 @@ test.describe('Admin — Site Settings', () => {
     const newValue = `TEST SITE NAME ${stamp}`
     await page.fill('input[placeholder="The Homeownership Community"]', newValue)
     await page.click('button:has-text("Save Settings")')
-    await expect(page.locator('text=Settings saved successfully!')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
 
     // Reset so we don't pollute the site.
     await page.fill('input[placeholder="The Homeownership Community"]', 'The Homeownership Community')

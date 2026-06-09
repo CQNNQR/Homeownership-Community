@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getServerClient, getServiceRoleClient } from '@/lib/admin'
 import { createClient } from '@supabase/supabase-js'
+import { revalidatePath } from 'next/cache'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET() {
   // Public read. The keys stored in site_settings (theme_*, social URLs,
@@ -35,7 +39,11 @@ export async function GET() {
     settings[item.key] = item.value
   })
 
-  return NextResponse.json(settings)
+  return NextResponse.json(settings, {
+    headers: {
+      'Cache-Control': 'no-store, max-age=0',
+    },
+  })
 }
 
 export async function POST(request: Request) {
@@ -69,6 +77,13 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Settings affect multiple prerendered pages and metadata. Revalidate
+  // immediately so admin changes are visible without waiting for ISR windows.
+  const pathsToRevalidate = ['/', '/about', '/books', '/blog', '/contact', '/podcast', '/resources']
+  for (const path of pathsToRevalidate) {
+    revalidatePath(path)
   }
 
   return NextResponse.json({ success: true, count: updates.length })
