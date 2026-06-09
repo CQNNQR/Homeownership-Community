@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isAllowlistedAdminEmail } from '@/lib/admin'
 
 /**
  * Next 16 proxy (replaces middleware.ts).
@@ -9,6 +10,11 @@ import { NextResponse, type NextRequest } from 'next/server'
  * - Other /admin/* paths: require a Supabase session with
  *   app_metadata.role === 'admin'. Non-admins go to '/', signed-out
  *   users go to '/admin/login'.
+ *
+ * Self-heal: if the requester is on the allowlist but their JWT
+ * lacks the admin claim, redirect them to /admin/login with a
+ * `?heal=1` query so the login page can call /api/auth/refresh
+ * and mint a fresh session cookie.
  */
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
@@ -56,6 +62,14 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user.app_metadata?.role !== 'admin') {
+    // Allowlisted email but JWT lacks the role. The login page
+    // will detect this on mount and call /api/auth/refresh.
+    if (isAllowlistedAdminEmail(user.email)) {
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = '/admin/login'
+      loginUrl.searchParams.set('heal', '1')
+      return NextResponse.redirect(loginUrl)
+    }
     const homeUrl = request.nextUrl.clone()
     homeUrl.pathname = '/'
     return NextResponse.redirect(homeUrl)

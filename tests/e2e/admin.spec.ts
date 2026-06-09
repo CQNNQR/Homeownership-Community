@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Admin Login', () => {
   test('should show login page and login form elements', async ({ page }) => {
     await page.goto('/admin/login')
-    await expect(page.locator('h1')).toContainText('Admin Login')
+    await expect(page.locator('h1')).toContainText('Site Editor Login')
     await expect(page.locator('input[type="email"]')).toBeVisible()
     await expect(page.locator('input[type="password"]')).toBeVisible()
     await expect(page.locator('button[type="submit"]')).toContainText('Sign In')

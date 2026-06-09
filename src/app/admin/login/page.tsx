@@ -38,8 +38,37 @@ export default function AdminLoginPage() {
       // app_metadata.role (it's tamper-resistant in the JWT, not the
       // client-side user object). If the user authenticated but isn't
       // an admin, sign them out and surface a clear error.
-      const checkRes = await fetch('/api/auth/check')
-      const checkData = await checkRes.json().catch(() => ({ isAdmin: false, user: null }))
+      let checkRes = await fetch('/api/auth/check')
+      let checkData = await checkRes.json().catch(() => ({ isAdmin: false, user: null }))
+
+      // If the server says "we just granted you admin but the cookie
+      // doesn't have it yet", call the refresh endpoint to mint a
+      // fresh session cookie. The user typed their password on this
+      // page, so re-validating it is safe (the refresh endpoint
+      // re-checks the password before issuing a new session).
+      if (!checkData?.isAdmin && checkData?.healed && checkData?.reason === 'role-granted-please-relogin') {
+        const refreshRes = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        })
+        const refreshData = await refreshRes.json().catch(() => ({}))
+
+        if (refreshRes.ok && refreshData?.isAdmin) {
+          // Re-check to confirm the cookie state is correct.
+          checkRes = await fetch('/api/auth/check')
+          checkData = await checkRes.json().catch(() => ({ isAdmin: false, user: null }))
+        } else {
+          await supabase.auth.signOut()
+          setError(
+            refreshData?.error ||
+              'We could not activate admin access for this account. ' +
+                'Please sign out, sign back in, and try again.'
+          )
+          setLoading(false)
+          return
+        }
+      }
 
       if (!checkData?.user) {
         await supabase.auth.signOut()
@@ -90,6 +119,7 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
               placeholder="admin@example.com"
+              autoComplete="email"
             />
           </div>
 
@@ -104,6 +134,7 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
               placeholder="Enter your password"
+              autoComplete="current-password"
             />
           </div>
 
