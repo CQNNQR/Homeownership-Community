@@ -8,9 +8,10 @@ test.setTimeout(120000)
 /**
  * Admin integration test suite.
  *
- * Logs in as admin@hoc.com / !Texas1995, exercises every editor end-to-end
- * against the live Supabase backend, and verifies the Zapier hook is wired
- * up. This is the focused regression suite for the June 8, 2026 fix pass.
+ * Logs in as the configured admin (E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD)
+ * and exercises every editor end-to-end against the live Supabase
+ * backend. This is the focused regression suite for the June 8 + June
+ * 10, 2026 fix passes.
  *
  * To run against a local dev server:
  *   E2E_BASE_URL=http://localhost:3000 npx playwright test admin-integration
@@ -21,8 +22,8 @@ test.setTimeout(120000)
  * The default BASE_URL is the Vercel production site.
  */
 
-const ADMIN_EMAIL = 'admin@hoc.com'
-const ADMIN_PASSWORD = '!Texas1995'
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@hoc.com'
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || '!Texas1995'
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3000'
 
 test.describe.configure({ mode: 'serial' })

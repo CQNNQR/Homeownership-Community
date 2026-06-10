@@ -1,7 +1,7 @@
 import { test, expect, chromium, Page } from '@playwright/test'
 
-const ADMIN_EMAIL = 'admin@hoc.com'
-const ADMIN_PASSWORD = '!Texas1995'
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@hoc.com'
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || '!Texas1995'
 const LOCAL_URL = 'http://localhost:3000'
 
 // Runs local by default. Set E2E_BASE_URL to target a remote deployment.
