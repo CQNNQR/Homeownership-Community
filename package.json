@@ -4,9 +4,13 @@
   "description": "The Homeownership Community Website",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/prebuild-check.mjs",
     "build": "next build",
     "start": "next start",
-    "vercel-build": "next build"
+    "vercel-build": "next build",
+    "build:nocheck": "NEXT_SKIP_PREBUILD=1 next build",
+    "test:unit": "playwright test tests/unit",
+    "test:recovery": "playwright test tests/e2e/backend-recovery.spec.ts"
   },
   "repository": {
     "type": "git",
