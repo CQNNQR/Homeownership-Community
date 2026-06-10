@@ -54,6 +54,9 @@ export default function ResourcesPage() {
     email: '',
     phone: '',
   })
+  const [joinSubmitting, setJoinSubmitting] = useState(false)
+  const [joinError, setJoinError] = useState('')
+  const [joinSuccess, setJoinSuccess] = useState('')
 
   useEffect(() => {
     const subscribed = localStorage.getItem('hoc_subscribed')
@@ -77,7 +80,6 @@ export default function ResourcesPage() {
       const data = await response.json()
 
       if (response.ok) {
-        alert('Thank you for subscribing! Check your email for your free guides.')
         localStorage.setItem('hoc_subscribed', 'true')
         setIsSubscribed(true)
         setShowSubscribeModal(false)
@@ -92,11 +94,45 @@ export default function ResourcesPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Thank you for your purchase! The Reverse Mortgage Guide will be sent to your email.')
-    setShowJoinModal(false)
-    setFormData({ firstName: '', lastName: '', email: '', phone: '' })
+    setJoinSubmitting(true)
+    setJoinError('')
+    setJoinSuccess('')
+    try {
+      const idempotencyKey = `resources-reverse-mortgage-${formData.email}-${Date.now()}`
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          source: 'resources-reverse-mortgage',
+          consent: true,
+          extra: { product: 'reverse-mortgage-guide', price: 99 },
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error?.message || 'Failed to submit your request')
+      }
+      setJoinSuccess('Thanks! Brandon will reach out within one business day with your guide and next steps.')
+      setFormData({ firstName: '', lastName: '', email: '', phone: '' })
+      // Auto-close after a short pause so the user can read the success.
+      setTimeout(() => {
+        setShowJoinModal(false)
+        setJoinSuccess('')
+      }, 4000)
+    } catch (err) {
+      setJoinError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setJoinSubmitting(false)
+    }
   }
 
   return (
@@ -283,7 +319,8 @@ export default function ResourcesPage() {
                     required
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                    disabled={joinSubmitting}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                     placeholder="John"
                   />
                 </div>
@@ -294,7 +331,8 @@ export default function ResourcesPage() {
                     required
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                    disabled={joinSubmitting}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                     placeholder="Doe"
                   />
                 </div>
@@ -306,7 +344,8 @@ export default function ResourcesPage() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                  disabled={joinSubmitting}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                   placeholder="john@example.com"
                 />
               </div>
@@ -316,15 +355,27 @@ export default function ResourcesPage() {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
+                  disabled={joinSubmitting}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                   placeholder="(555) 123-4567"
                 />
               </div>
+              {joinError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3" data-testid="join-error">
+                  {joinError}
+                </div>
+              )}
+              {joinSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3" data-testid="join-success">
+                  {joinSuccess}
+                </div>
+              )}
               <button
                 type="submit"
-                className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2"
+                disabled={joinSubmitting}
+                className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Complete Purchase - $99
+                {joinSubmitting ? 'Submitting…' : 'Complete Purchase - $99'}
               </button>
             </form>
           </div>
