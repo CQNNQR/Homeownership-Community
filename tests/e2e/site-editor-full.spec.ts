@@ -1,5 +1,16 @@
 import { test, expect, chromium, Page } from '@playwright/test'
 
+/**
+ * Test isolation rule (June 10, 2026 — Public Content Recovery):
+ *   Every disposable record MUST use the `E2E_` prefix and be
+ *   cleaned up by clicking Delete on the row that matches that
+ *   stamp. The first existing production row in any editor list
+ *   must NEVER be edited or deleted by a test — the prior
+ *   "click first Delete" / "click first Edit" pattern in this
+ *   file was unsafe against a populated production database and
+ *   is no longer permitted.
+ */
+
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@hoc.com'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || '!Texas1995'
 const LOCAL_URL = 'http://localhost:3000'
@@ -429,7 +440,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.waitForTimeout(500)
 
       // Fill form
-      const testName = 'TEST USER ' + Date.now()
+      const testName = 'E2E_USER_' + Date.now()
       const testQuote = 'This is a test quote for the testimonial.'
       await page.fill('input[placeholder="John D."]', testName)
       await page.fill('input[placeholder="First-time Homeowner"]', 'Test Role')
@@ -442,8 +453,10 @@ test.describe('Site Editor - Full Test Suite', () => {
       // Should appear in list (alert was handled by dialog listener)
       await expect(page.locator(`text=${testName}`)).toBeVisible()
 
-      // Delete the test testimonial
-      await page.click('button:has-text("Delete")')
+      // Delete the test testimonial — match the row we just created
+      // by its unique stamp, never the first production row.
+      const testRow = page.locator(`div:has(p:has-text("${testName}"))`).first()
+      await testRow.locator('button:has-text("Delete")').click()
       await page.waitForTimeout(1000)
     })
 
@@ -459,22 +472,26 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.click('button:has-text("Testimonials")')
       await page.waitForTimeout(500)
 
-      // If there's an existing testimonial, edit it
-      const editButtons = page.locator('button:has-text("Edit")')
-      const count = await editButtons.count()
-
-      if (count > 0) {
-        await editButtons.first().click()
-        await page.waitForTimeout(500)
-
-        // Modify the quote
-        const quoteField = page.locator('textarea[placeholder="What they said..."]')
-        await quoteField.fill('MODIFIED TEST QUOTE ' + Date.now())
-
-        await page.click('button:has-text("Save")')
-        await page.waitForTimeout(2000)
-        // Alert was dismissed by dialog listener
+      // Per the E2E isolation rule, never click Edit on the first
+      // production row. Only proceed if there's an E2E_ test row
+      // from a prior run still present; otherwise skip.
+      const e2eRow = page.locator('div:has(p:has-text("E2E_"))').first()
+      if (await e2eRow.count() === 0) {
+        test.skip(true, 'No E2E_-prefixed testimonial row to edit (rule: never touch the first production row)')
+        return
       }
+
+      const editButton = e2eRow.locator('button:has-text("Edit")')
+      await editButton.click()
+      await page.waitForTimeout(500)
+
+      // Modify the quote
+      const quoteField = page.locator('textarea[placeholder="What they said..."]')
+      await quoteField.fill('MODIFIED E2E QUOTE ' + Date.now())
+
+      await page.click('button:has-text("Save")')
+      await page.waitForTimeout(2000)
+      // Alert was dismissed by dialog listener
     })
   })
 
@@ -495,9 +512,9 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.click('button:has-text("+ Add Episode")')
       await page.waitForTimeout(500)
 
-      const testTitle = 'TEST EPISODE ' + Date.now()
+      const testTitle = 'E2E_EPISODE_' + Date.now()
       await page.fill('input[placeholder="Episode title..."]', testTitle)
-      await page.fill('input[placeholder="https://youtube.com/watch?v=..."]', 'https://youtube.com/watch?v=test123')
+      await page.fill('input[placeholder="https://youtube.com/watch?v=..."]', 'https://youtube.com/watch?v=e2e123')
       await page.fill('textarea[placeholder="Episode description..."]', 'Test description')
 
       await page.click('button:has-text("Save")')
@@ -506,9 +523,9 @@ test.describe('Site Editor - Full Test Suite', () => {
       // Should appear in list (success shown via alert, which is dismissed)
       await expect(page.locator(`text=${testTitle}`)).toBeVisible()
 
-      // Delete the test episode
-      const deleteButtons = page.locator('button:has-text("Delete")')
-      await deleteButtons.first().click()
+      // Delete the test episode — match the row by its unique stamp.
+      const testRow = page.locator(`div:has(h3:has-text("${testTitle}"))`).first()
+      await testRow.locator('button:has-text("Delete")').click()
       await page.waitForTimeout(1000)
     })
   })
@@ -527,7 +544,7 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.click('button:has-text("+ Add Media")')
       await page.waitForTimeout(500)
 
-      const testName = 'TEST MEDIA ' + Date.now()
+      const testName = 'E2E_MEDIA_' + Date.now()
       await page.fill('input[placeholder="Image or PDF name"]', testName)
       await page.fill('input[placeholder="https://..."]', 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400')
 
@@ -537,9 +554,9 @@ test.describe('Site Editor - Full Test Suite', () => {
       // Should appear in list
       await expect(page.locator('text=' + testName)).toBeVisible()
 
-      // Delete the test media
-      const deleteButtons = page.locator('button:has-text("Delete")')
-      await deleteButtons.first().click()
+      // Delete the test media — match the row by its unique stamp.
+      const testRow = page.locator(`div:has(p:has-text("${testName}"))`).first()
+      await testRow.locator('button:has-text("Delete")').click()
       await page.waitForTimeout(1000)
     })
   })
@@ -681,7 +698,7 @@ test.describe('Site Editor - Full Test Suite', () => {
   test.describe('Books', () => {
     test('should add a book and see it on the public /books page', async ({ page }) => {
       const stamp = Date.now()
-      const title = `TEST BOOK ${stamp}`
+      const title = `E2E_BOOK_${stamp}`
 
       await page.goto(`${getBaseUrl()}/admin/login`)
       await page.fill('input[type="email"]', ADMIN_EMAIL)
@@ -696,8 +713,8 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.waitForSelector('input[placeholder="Book title..."]', { state: 'visible' })
 
       await page.fill('input[placeholder="Book title..."]', title)
-      await page.fill('input[placeholder="Author name..."]', 'Playwright Test')
-      await page.fill('input[placeholder="https://amazon.com/..."]', `https://amazon.com/dp/TEST${stamp}`)
+      await page.fill('input[placeholder="Author name..."]', 'Playwright E2E')
+      await page.fill('input[placeholder="https://amazon.com/..."]', `https://amazon.com/dp/E2E${stamp}`)
 
       // Handle the alert that pops on success
       page.once('dialog', d => d.accept())
@@ -717,6 +734,12 @@ test.describe('Site Editor - Full Test Suite', () => {
         console.log('Note: public /books may have ISR delay; admin save verified.')
       }
       await booksPage.close()
+
+      // Clean up: delete the row we just created by matching its
+      // stamp. The row is in the admin list after the form closes.
+      const testRow = page.locator(`div:has(h3:has-text("${title}"))`).first()
+      await testRow.locator('button:has-text("Delete")').click()
+      await page.waitForTimeout(1500)
     })
 
     test('should edit an existing book', async ({ page }) => {
@@ -728,21 +751,26 @@ test.describe('Site Editor - Full Test Suite', () => {
       await page.click('button:has-text("Books")')
       await page.waitForTimeout(500)
 
-      const editButtons = page.locator('button:has-text("Edit")')
-      const count = await editButtons.count()
-
-      if (count > 0) {
-        await editButtons.first().click()
-        await page.waitForTimeout(500)
-
-        // Modify title
-        const titleField = page.locator('input[placeholder="Book title..."]')
-        await titleField.fill('MODIFIED BOOK TITLE ' + Date.now())
-
-        page.once('dialog', d => d.accept())
-        await page.click('button:has-text("Save Book")')
-        await page.waitForTimeout(2000)
+      // Per the E2E isolation rule, never click Edit on the first
+      // production row. Only proceed if there's an E2E_ test row
+      // still present (e.g. from a previous test); otherwise skip.
+      const e2eRow = page.locator('div:has(h3:has-text("E2E_BOOK_"))').first()
+      if (await e2eRow.count() === 0) {
+        test.skip(true, 'No E2E_-prefixed book row to edit (rule: never touch the first production row)')
+        return
       }
+
+      const editButton = e2eRow.locator('button:has-text("Edit")')
+      await editButton.click()
+      await page.waitForTimeout(500)
+
+      // Modify title
+      const titleField = page.locator('input[placeholder="Book title..."]')
+      await titleField.fill('MODIFIED E2E BOOK ' + Date.now())
+
+      page.once('dialog', d => d.accept())
+      await page.click('button:has-text("Save Book")')
+      await page.waitForTimeout(2000)
     })
   })
 

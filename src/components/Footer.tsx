@@ -20,7 +20,12 @@ export default function Footer() {
   useEffect(() => {
     fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => {
+      .then(payload => {
+        // Unwrap the { data } envelope; fall back to the raw object in
+        // case the deployment is still serving the pre-envelope shape.
+        const data = payload?.data && typeof payload.data === 'object'
+          ? payload.data
+          : (payload && typeof payload === 'object' ? payload : null)
         if (data) {
           setSettings({
             facebook_url: data.facebook_url || '',

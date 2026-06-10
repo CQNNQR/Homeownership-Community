@@ -9,8 +9,9 @@
     "start": "next start",
     "vercel-build": "next build",
     "build:nocheck": "NEXT_SKIP_PREBUILD=1 next build",
-    "test:unit": "playwright test tests/unit",
-    "test:recovery": "playwright test tests/e2e/backend-recovery.spec.ts"
+    "test:unit": "playwright test --project=unit",
+    "test:e2e": "playwright test --project=e2e",
+    "test:recovery": "playwright test --project=e2e tests/e2e/backend-recovery.spec.ts"
   },
   "repository": {
     "type": "git",

@@ -52,6 +52,7 @@ const REQUIRED_TABLES = [
   '_migrations_state',
 ]
 const REQUIRED_COLUMNS = {
+  books: ['title', 'amazon_url', 'is_active', 'cover_image_url'],
   subscribers: ['email', 'source', 'first_name', 'last_name', 'phone'],
   blog_post_visibility: ['wordpress_id', 'slug', 'title', 'is_visible'],
   lead_delivery_jobs: ['subscriber_id', 'idempotency_key', 'status', 'payload', 'attempt_count'],

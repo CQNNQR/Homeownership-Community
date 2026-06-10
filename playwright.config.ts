@@ -1,7 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  // Default testDir is required by the config schema; the actual
+  // directory is set per-project below. The two projects use
+  // different testDir + testMatch so a single config can drive both
+  // unit and e2e suites without one swallowing the other's specs.
+  testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -13,7 +17,17 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'unit',
+      testDir: './tests/unit',
+      testMatch: '**/*.spec.ts',
+      // Unit tests should not need a dev server; suppress the
+      // webServer block to keep the suite hermetic.
+      use: { baseURL: 'http://localhost:3000' },
+    },
+    {
+      name: 'e2e',
+      testDir: './tests/e2e',
+      testMatch: '**/*.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
   ],

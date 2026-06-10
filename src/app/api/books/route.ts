@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache'
 import {
   badRequest,
+  internalError,
   notFound,
   ok,
   parsePartial,
@@ -25,7 +26,7 @@ export async function GET() {
         .order('sort_order', { ascending: true })
       if (error) {
         logServerOp({ requestId, op: 'list_books', table: 'books', errorCode: error.code })
-        return ok([])
+        return internalError(error.message, { code: error.code })
       }
       return ok(data || [])
     },
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
           amazon_url: amazonUrl,
           description: (body as { description?: string }).description,
           sort_order: (body as { sort_order?: number }).sort_order ?? 0,
+          cover_image_url: (body as { cover_image_url?: string }).cover_image_url,
         }])
         .select()
         .single()
@@ -86,6 +88,7 @@ export async function PUT(request: Request) {
           description: body.description,
           sort_order: body.sort_order,
           is_active: body.is_active,
+          cover_image_url: body.cover_image_url,
         })
         .eq('id', body.id)
         .select()
@@ -111,7 +114,7 @@ export async function PATCH(request: Request) {
   if (!id) return badRequest('id required')
 
   const { patch, ignored } = parsePartial<Record<string, unknown>>(rest, [
-    'title', 'author', 'amazon_url', 'description', 'sort_order', 'is_active',
+    'title', 'author', 'amazon_url', 'description', 'sort_order', 'is_active', 'cover_image_url',
   ] as const)
   if (Object.keys(patch).length === 0) {
     return badRequest('No writable fields supplied', { ignored })

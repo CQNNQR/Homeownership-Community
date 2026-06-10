@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache'
 import {
   badRequest,
+  internalError,
   notFound,
   ok,
   parsePartial,
@@ -25,7 +26,7 @@ export async function GET() {
         .order('event_date', { ascending: true })
       if (error) {
         logServerOp({ requestId, op: 'list_events', table: 'events', errorCode: error.code })
-        return ok([])
+        return internalError(error.message, { code: error.code })
       }
       return ok(data || [])
     },

@@ -683,7 +683,7 @@ function BooksManager() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ title: '', author: 'Brandon Bee Dixon', amazon_url: '', description: '', sort_order: 0 })
+  const [form, setForm] = useState({ title: '', author: 'Brandon Bee Dixon', amazon_url: '', description: '', sort_order: 0, cover_image_url: '' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -696,8 +696,13 @@ function BooksManager() {
     // path here. If the editor ever needs to see inactive rows, the
     // server-side admin override can be added later.
     const res = await fetch('/api/books')
-    const data = await res.json()
-    setBooks(Array.isArray(data) ? data : [])
+    const payload = await res.json()
+    // Unwrap the { data } envelope; fall back to the raw array in
+    // case the deployment is still serving the pre-envelope shape.
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data) ? payload.data : []
+    setBooks(list)
     setLoading(false)
   }
 
@@ -719,7 +724,7 @@ function BooksManager() {
       return
     }
 
-    setForm({ title: '', author: 'Brandon Bee Dixon', amazon_url: '', description: '', sort_order: 0 })
+    setForm({ title: '', author: 'Brandon Bee Dixon', amazon_url: '', description: '', sort_order: 0, cover_image_url: '' })
     setShowForm(false)
     setEditingId(null)
     setSaving(false)
@@ -750,6 +755,7 @@ function BooksManager() {
       amazon_url: book.amazon_url,
       description: book.description || '',
       sort_order: book.sort_order || 0,
+      cover_image_url: book.cover_image_url || '',
     })
     setEditingId(book.id)
     setShowForm(true)
@@ -762,7 +768,7 @@ function BooksManager() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-lg font-bold text-black">Books</h2>
         <button
-          onClick={() => { setShowForm(true); setEditingId(null); setForm({ title: '', author: 'Brandon Bee Dixon', amazon_url: '', description: '', sort_order: 0 }); }}
+          onClick={() => { setShowForm(true); setEditingId(null); setForm({ title: '', author: 'Brandon Bee Dixon', amazon_url: '', description: '', sort_order: 0, cover_image_url: '' }); }}
           className="bg-red-700 hover:bg-red-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
         >
           + Add Book
@@ -792,6 +798,17 @@ function BooksManager() {
               <textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700" placeholder="Brief description..." />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cover image URL</label>
+              <input
+                type="text"
+                value={form.cover_image_url}
+                onChange={(e) => setForm({ ...form, cover_image_url: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700"
+                placeholder="/book-cover.jpg or https://cdn.example.com/cover.jpg"
+              />
+              <p className="text-xs text-gray-500 mt-1">Optional. Path under <code>/public</code> (e.g. <code>/book-message-to-the-businessman.jpg</code>) or a full URL.</p>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
               <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:outline-none focus:border-red-700" />
             </div>
@@ -808,14 +825,29 @@ function BooksManager() {
         {books.map((book) => (
           <div key={book.id} className="bg-white rounded-xl shadow p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Order: {book.sort_order}</span>
+              <div className="flex-1 flex gap-4">
+                {book.cover_image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={book.cover_image_url}
+                    alt={`${book.title} cover`}
+                    className="w-16 h-24 rounded object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-24 rounded bg-gradient-to-br from-red-700 to-red-900 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Order: {book.sort_order}</span>
+                    {book.cover_image_url && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Cover set</span>
+                    )}
+                  </div>
+                  <h3 className="font-bold text-black">{book.title}</h3>
+                  <p className="text-sm text-gray-500">{book.author}</p>
+                  {book.description && <p className="text-sm text-gray-600 mt-1">{book.description}</p>}
+                  <a href={book.amazon_url} target="_blank" rel="noopener noreferrer" className="text-sm text-red-700 hover:text-red-800 mt-2 inline-block">View on Amazon →</a>
                 </div>
-                <h3 className="font-bold text-black">{book.title}</h3>
-                <p className="text-sm text-gray-500">{book.author}</p>
-                {book.description && <p className="text-sm text-gray-600 mt-1">{book.description}</p>}
-                <a href={book.amazon_url} target="_blank" rel="noopener noreferrer" className="text-sm text-red-700 hover:text-red-800 mt-2 inline-block">View on Amazon →</a>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => handleEdit(book)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
@@ -2614,11 +2646,16 @@ function TestimonialsEditor() {
     // table directly. The route is admin-only, so credentials must
     // be included so the session cookie rides along.
     const res = await fetch('/api/testimonials?all=1', { credentials: 'include' })
-    const data = await res.json()
+    const payload = await res.json()
     if (!res.ok) {
       setTestimonials([])
     } else {
-      setTestimonials(Array.isArray(data) ? data : [])
+      // Unwrap the { data } envelope; fall back to the raw array in
+      // case the deployment is still serving the pre-envelope shape.
+      const list = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data) ? payload.data : []
+      setTestimonials(list)
     }
     setLoading(false)
   }

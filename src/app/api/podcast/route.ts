@@ -1,5 +1,6 @@
 import {
   badRequest,
+  internalError,
   notFound,
   ok,
   parsePartial,
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
         const { data, error } = await guard.supabase.from('podcast_episodes').select('*')
         if (error) {
           logServerOp({ requestId, op: 'list_podcast_all', table: 'podcast_episodes', userId: guard.user.id, errorCode: error.code })
-          return ok([])
+          return internalError(error.message, { code: error.code })
         }
         return ok(data || [])
       },
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
         .order('episode_number', { ascending: true })
       if (error) {
         logServerOp({ requestId, op: 'list_podcast_public', table: 'podcast_episodes', errorCode: error.code })
-        return ok([])
+        return internalError(error.message, { code: error.code })
       }
       return ok(data || [])
     },

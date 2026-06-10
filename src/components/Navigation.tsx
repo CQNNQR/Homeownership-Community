@@ -26,12 +26,17 @@ export default function Navigation() {
   useEffect(() => {
     fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => {
-        if (data) {
+      .then(payload => {
+        // Unwrap the { data } envelope; fall back to the raw object in
+        // case the deployment is still serving the pre-envelope shape.
+        const settings = payload?.data && typeof payload.data === 'object'
+          ? payload.data
+          : (payload && typeof payload === 'object' ? payload : null)
+        if (settings) {
           setTheme({
-            primary_color: data.theme_primary_color || '#A61C30',
-            header_bg: data.theme_header_bg || '#FFFFFF',
-            header_text: data.theme_header_text || '#000000',
+            primary_color: settings.theme_primary_color || '#A61C30',
+            header_bg: settings.theme_header_bg || '#FFFFFF',
+            header_text: settings.theme_header_text || '#000000',
           })
         }
       })
@@ -40,8 +45,11 @@ export default function Navigation() {
     // Check if there are visible podcasts
     fetch('/api/podcast', { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
+      .then(payload => {
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data) ? payload.data : []
+        if (list.length > 0) {
           setShowPodcast(true)
         }
       })

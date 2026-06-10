@@ -142,13 +142,90 @@ CREATE TABLE IF NOT EXISTS public._migrations_state (
 );
 
 INSERT INTO public._migrations_state (id, schema_version)
-VALUES (1, '2026-06-10-recovery-v1')
+VALUES (1, '2026-06-10-recovery-v2')
 ON CONFLICT (id) DO UPDATE
    SET schema_version = EXCLUDED.schema_version,
        last_repair_at = NOW();
 
 -- ---------------------------------------------------------------------
--- 5. RLS cleanup pass — drop any "auth.role() = 'authenticated'" policies
+-- 5. books.cover_image_url + book backfill
+--    - Add the missing cover image column. The DB never had it
+--      even though two covers exist in /public (book-message-to-
+--      the-businessman.jpg and book-sales-nucleus.jpg), so the
+--      /books page always rendered a generic red gradient.
+--    - Backfill the two Brandon books with the public-asset URLs.
+--    - The UPDATE is keyed on the stable title (Brandon's published
+--      books are not deleted) so it is safe to re-run.
+-- ---------------------------------------------------------------------
+ALTER TABLE public.books
+    ADD COLUMN IF NOT EXISTS cover_image_url TEXT;
+
+UPDATE public.books
+   SET cover_image_url = '/book-message-to-the-businessman.jpg'
+ WHERE title = 'Message to the Businessman'
+   AND (cover_image_url IS NULL OR cover_image_url = '');
+
+UPDATE public.books
+   SET cover_image_url = '/book-sales-nucleus.jpg'
+ WHERE title = 'Sales: The Nucleus of Any Profession'
+   AND (cover_image_url IS NULL OR cover_image_url = '');
+
+-- ---------------------------------------------------------------------
+-- 6. Testimonial backfill
+--    - Earlier test passes soft-deleted and re-inserted the
+--      seeded Sarah M. and James T. rows; restore them with their
+--      original quotes and ensure they are active.
+--    - Reactivate Connor K. (his row exists from a later test
+--      insertion but was deactivated) and seed his canonical quote
+--      if it is missing.
+--    - The WHERE clause guards on name, so the statements are
+--      safe to re-run after a partial application.
+-- ---------------------------------------------------------------------
+UPDATE public.testimonials
+   SET quote = 'Brandon helped me understand the path from renter to owner. His guidance was invaluable.',
+       role = 'First-time Homeowner',
+       is_active = true
+ WHERE name = 'Sarah M.'
+   AND (quote IS NULL OR quote = '' OR is_active = false);
+
+UPDATE public.testimonials
+   SET quote = 'The real estate investment insights I gained helped me build a rental portfolio.',
+       role = 'Real Estate Investor',
+       is_active = true
+ WHERE name = 'James T.'
+   AND (quote IS NULL OR quote = '' OR is_active = false);
+
+-- Re-activate any "Connor K." row that an earlier test pass soft-
+-- deleted. We do not overwrite the quote if the admin has edited
+-- it through the Site Editor.
+UPDATE public.testimonials
+   SET is_active = true
+ WHERE name = 'Connor K.'
+   AND is_active = false;
+
+-- Insert the canonical Connor K. row if it doesn't already exist.
+-- The recovery plan needs three intended testimonials (Sarah M.,
+-- James T., Connor K.) to render on the homepage.
+INSERT INTO public.testimonials (name, quote, role, is_active)
+SELECT 'Connor K.',
+       'Brandon''s "I Create Owners" mindset is real. Working with his team gave me a clear path to my first rental property.',
+       'New Homeowner',
+       true
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.testimonials WHERE name = 'Connor K.'
+);
+
+-- If the row existed but its quote is empty, populate the canonical
+-- one. Safe to re-run.
+UPDATE public.testimonials
+   SET quote = 'Brandon''s "I Create Owners" mindset is real. Working with his team gave me a clear path to my first rental property.',
+       role = 'New Homeowner',
+       is_active = true
+ WHERE name = 'Connor K.'
+   AND (quote IS NULL OR quote = '');
+
+-- ---------------------------------------------------------------------
+-- 7. RLS cleanup pass — drop any "auth.role() = 'authenticated'" policies
 --    still hanging around from the May 31 set; the new admin-gated
 --    policies above replace them.
 -- ---------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import {
   badRequest,
+  internalError,
   notFound,
   ok,
   parsePartial,
@@ -22,7 +23,7 @@ export async function GET() {
         .order('created_at', { ascending: false })
       if (error) {
         logServerOp({ requestId, op: 'list_media', table: 'media', userId: guard.user.id, errorCode: error.code })
-        return ok([])
+        return internalError(error.message, { code: error.code })
       }
       return ok(data || [])
     },

@@ -13,6 +13,7 @@ interface Book {
   sort_order: number | null
   is_active: boolean
   created_at: string
+  cover_image_url: string | null
 }
 
 const recommendedReading = [
@@ -47,8 +48,13 @@ export default function BooksPage() {
       try {
         const response = await fetch('/api/books')
         if (!response.ok) throw new Error('Failed to fetch books')
-        const data = await response.json()
-        setBooks(data || [])
+        const payload = await response.json()
+        // Unwrap the { data } envelope; fall back to the raw array in
+        // case the deployment is still serving the pre-envelope shape.
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data) ? payload.data : []
+        setBooks(list)
       } catch (err) {
         setBooks([])
       } finally {
@@ -111,11 +117,21 @@ export default function BooksPage() {
                     <div className="flex flex-col md:flex-row gap-8">
                       {/* Book Cover */}
                       <div className="flex-shrink-0">
-                        <div className="w-48 h-72 rounded-lg shadow-lg bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center">
-                          <svg className="w-20 h-20 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                          </svg>
-                        </div>
+                        {book.cover_image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={book.cover_image_url}
+                            alt={`${book.title} cover`}
+                            data-testid="book-cover"
+                            className="w-48 h-72 rounded-lg shadow-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-48 h-72 rounded-lg shadow-lg bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center">
+                            <svg className="w-20 h-20 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
                       {/* Book Details */}
                       <div className="flex-1">

@@ -28,7 +28,7 @@ export interface RequiredTable {
 
 export const REQUIRED_SCHEMA: RequiredTable[] = [
   { name: 'site_settings', columns: ['key', 'value', 'updated_at'] },
-  { name: 'books', columns: ['id', 'title', 'amazon_url', 'is_active'], mustHaveAdminRls: true },
+  { name: 'books', columns: ['id', 'title', 'amazon_url', 'is_active', 'cover_image_url'], mustHaveAdminRls: true },
   { name: 'events', columns: ['id', 'title', 'event_date', 'is_active'], mustHaveAdminRls: true },
   { name: 'testimonials', columns: ['id', 'name', 'quote', 'is_active'], mustHaveAdminRls: true },
   { name: 'podcast_episodes', columns: ['id', 'title', 'youtube_url', 'is_visible'], mustHaveAdminRls: true },

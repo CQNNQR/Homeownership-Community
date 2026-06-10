@@ -1,5 +1,7 @@
+import { revalidatePath } from 'next/cache'
 import {
   badRequest,
+  internalError,
   notFound,
   ok,
   parsePartial,
@@ -8,6 +10,12 @@ import {
   withServerLog,
 } from '@/lib/api'
 import { getServiceRoleClient, getServerClient, requireAdminOrResponse } from '@/lib/admin'
+
+// After any testimonial mutation, force the homepage to re-render
+// so the next request sees the new active rows. /testimonials has
+// its own revalidation already (every 10s via revalidate=10), but
+// the / page only refreshes its 10-second ISR window on demand.
+const PUBLIC_REVALIDATE_PATHS = ['/']
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -41,7 +49,9 @@ export async function GET(request: Request) {
         .eq('is_active', true)
       if (error) {
         logServerOp({ requestId, op: 'list_testimonials_public', table: 'testimonials', errorCode: error.code })
-        return ok([])
+        // Surface a structured 500 so a Supabase outage is visible
+        // to operators instead of masquerading as "no testimonials".
+        return internalError(error.message, { code: error.code })
       }
       return ok(data || [])
     },
@@ -74,6 +84,7 @@ export async function POST(request: Request) {
         logServerOp({ requestId, op: 'create_testimonial', table: 'testimonials', userId: guard.user.id, errorCode: error?.code })
         return badRequest(error?.message ?? 'Insert failed')
       }
+      for (const p of PUBLIC_REVALIDATE_PATHS) revalidatePath(p)
       return ok(data, 'Testimonial created')
     },
   )
@@ -99,6 +110,7 @@ export async function PUT(request: Request) {
         logServerOp({ requestId, op: 'replace_testimonial', table: 'testimonials', recordId: body.id, userId: guard.user.id, errorCode: error?.code })
         return error ? badRequest(error.message) : notFound('Testimonial')
       }
+      for (const p of PUBLIC_REVALIDATE_PATHS) revalidatePath(p)
       return ok(data, 'Testimonial updated')
     },
   )
@@ -133,6 +145,7 @@ export async function PATCH(request: Request) {
         logServerOp({ requestId, op: 'patch_testimonial', table: 'testimonials', recordId: id, userId: guard.user.id, errorCode: error?.code })
         return error ? badRequest(error.message) : notFound('Testimonial')
       }
+      for (const p of PUBLIC_REVALIDATE_PATHS) revalidatePath(p)
       return ok(data, 'Testimonial updated')
     },
   )
@@ -158,6 +171,7 @@ export async function DELETE(request: Request) {
         logServerOp({ requestId, op: 'soft_delete_testimonial', table: 'testimonials', recordId: body.id, userId: guard.user.id, errorCode: error?.code })
         return error ? badRequest(error.message) : notFound('Testimonial')
       }
+      for (const p of PUBLIC_REVALIDATE_PATHS) revalidatePath(p)
       return ok({ id: body.id }, 'Testimonial deactivated')
     },
   )

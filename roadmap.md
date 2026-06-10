@@ -121,6 +121,83 @@ The full recovery plan (`Backend Recovery Plan.txt`, June 10) was implemented in
 
 ---
 
+## Public Content Recovery (June 10, 2026)
+
+### Why
+The June 10 Backend Recovery pass landed the schema repair and the shared API envelope, but several follow-on items were not finished in that commit:
+
+1. The repair migration was not extended with `books.cover_image_url`, so the two Brandon books on `/public` (`book-message-to-the-businessman.jpg`, `book-sales-nucleus.jpg`) had no matching DB column and the `/books` page rendered a generic red gradient cover. The drift checker did not know to look for the column either.
+2. The recovery test was green because of `test:unit` running zero specs — the Playwright config was scoped to `./tests/e2e` and silently passed.
+3. The `TestimonialsEditor` and `BooksManager` in `admin/page.tsx` were still reading API responses as raw arrays, so they would have broken the moment the canonical `{ data }` envelope shipped.
+4. Several public read endpoints (`/api/testimonials`, `/api/books`, `/api/events`, `/api/podcast`, `/api/media`, `/api/subscribers`) returned `ok([])` on Supabase failure, hiding outages behind "no rows yet" — exactly the false-negative that hid the original testimonial wipe.
+5. Test rows used a `TEST_*` prefix and the suite used "click first Delete" patterns. On a populated production database this was unsafe — the prior commit's claim that "tests safely exercise production" was incorrect for the editor flows. The new rule is: disposable records are stamped with `E2E_*` and cleaned up by row match; the first existing production row is never edited or deleted.
+
+### What landed
+
+**Schema**
+
+- `supabase/migrations/20260610000000_repair_schema_and_rls.sql` — extended with `books.cover_image_url TEXT` (`ADD COLUMN IF NOT EXISTS`), backfill UPDATEs for both Brandon book titles, restoration of the Sarah M. and James T. testimonial rows (active=true, original quotes), reactivation of the Connor K. row, and a canonical quote insert for Connor K. if his row is missing. RLS cleanup pass renumbered to 7. Bumped schema version to `2026-06-10-recovery-v2`.
+- `src/lib/deployment-checks.ts` — added `cover_image_url` to the `books` required column list. The drift check now fails the build if the column is missing.
+- `scripts/prebuild-check.mjs` — same column added to the prebuild smoke check.
+
+**API surface**
+
+- `src/app/api/{testimonials,books,events,podcast,media,subscribers}/route.ts` — public read endpoints now return `internalError(error.message, { code: error.code })` on Supabase failure instead of `ok([])`. Outages are visible to operators, not masked as "no rows".
+- `src/app/api/testimonials/route.ts` — every mutation (POST, PUT, PATCH, DELETE) now calls `revalidatePath('/')` so the homepage re-renders the new active rows on the next request.
+- `src/app/api/books/route.ts` — POST/PUT insert and PATCH whitelist extended with `cover_image_url`. The patch preserves existing cover images when the field is omitted (verified by a new PATCH test).
+
+**Client envelope unwrap**
+
+- `src/components/BooksPreview.tsx`, `src/app/books/page.tsx`, `src/components/Navigation.tsx`, `src/components/Footer.tsx`, `src/components/EventsPreview.tsx`, `src/app/admin/page.tsx` (`BooksManager`, `TestimonialsEditor`) — every client-side `fetch('/api/...')` consumer now unwraps `{ data }` and falls back to the raw array/object shape so a half-deployed Vercel build does not silently render empty lists.
+
+**Cover image rendering**
+
+- `src/components/BooksPreview.tsx` — cover slot renders `book.cover_image_url` when set, with the existing icon as fallback. Added `data-testid="book-cover"` for the test.
+- `src/app/books/page.tsx` — same on the dedicated page.
+- `src/app/admin/page.tsx` (`BooksManager`) — new `cover_image_url` form field, sent on POST/PUT, rendered as a thumbnail in the row with a "Cover set" badge.
+
+**Test infrastructure**
+
+- `playwright.config.ts` — added a `unit` project (`testDir: './tests/unit'`) and renamed the existing e2e project to `e2e`. The previous config silently ran zero unit specs; `npm run test:unit` is now a real, hermetic suite that no longer spins up the dev server.
+- `package.json` — `test:unit` now invokes `--project=unit`; new `test:e2e` and `test:recovery` scripts use `--project=e2e`.
+- `tests/e2e/backend-recovery.spec.ts` — added acceptance tests for:
+  - envelope shape on `/api/testimonials`, `/api/books`, `/api/events`, `/api/podcast`, `/api/settings`
+  - the homepage rendering the testimonials section when the backfill is applied
+  - both Brandon book covers rendered on `/` and `/books`
+  - runtime smoke tests that `/api/books` and `/api/testimonials` do not 5xx on a missing column (catches a missed deploy)
+  - the Resources form test now fails fast on a 5xx response (catches a missed migration before timing out)
+- `tests/e2e/admin-integration.spec.ts` — disposable records renamed from `TEST_*` to `E2E_*`; cleanup clicks Delete on the row that matches the stamp. Header docstring spells out the isolation rule.
+- `tests/e2e/site-editor-full.spec.ts` — same `E2E_*` rename. The dangerous "click first Edit" patterns in the Book and Testimonial editors are replaced with row-matched edits that only run when an `E2E_*` row is present; otherwise the test skips itself.
+
+**Roadmap / docs**
+
+- This section is the dated Public Content Recovery entry.
+- The June 8 admin-integration description was updated to reflect the new isolation rule ("all disposable records are stamped with the `E2E_` prefix and cleaned up by row match; the test never edits or deletes the first existing production row"). The prior "tests safely exercise production" framing is replaced by this rule.
+
+**Files NOT in this commit**
+
+The following are intentionally not committed (also covered by `.gitignore` patterns where applicable):
+
+- `logs.txt`
+- `test bloops.txt`
+- `Backend Recovery Plan.txt`
+- `next-env.d.ts` (already-tracked file; modified by Next.js itself, not edited by hand)
+
+### Build status (post-recovery)
+
+- `npx tsc --noEmit` — clean.
+- `npx playwright test --project=unit` — passes (the previously-silent suite now actually runs and asserts).
+- `npx playwright test --project=e2e tests/e2e/backend-recovery.spec.ts` — passes locally with `NEXT_SKIP_PREBUILD=1`; the form test skips with a clear reason when the runtime check fires.
+- `npm run build:nocheck` — succeeds locally.
+
+### What this explicitly does NOT do
+
+- **Does not apply the migration to production.** Brandon runs the SQL (or `supabase db push`) on the hosted Supabase project. The migration is idempotent and can be re-applied safely.
+- **Does not backfill data outside the migration.** The Sarah M. / James T. / Connor K. reactivation and the book cover backfill are all in the migration; the test schema is unverified against production.
+- **Does not rotate the admin password** — same as the prior pass.
+
+---
+
 ## Setup Phase (Completed)
 
 - [x] Create GitHub repository "Homeownership-Community"
@@ -588,7 +665,7 @@ User reported "I can't even log in" as `admin@hoc.com / !Texas1995`, and Brandon
 
 **Test suite overhaul**
 
-- `tests/e2e/admin-integration.spec.ts` — **NEW**. 14 focused integration tests covering login, every editor (Site Settings, Books, Testimonials, Podcast, Media, Local Blog Posts, Theme), Subscribers + Zapier config, and Logout. Uses `admin@hoc.com / !Texas1995` against the live Vercel deployment by default; `E2E_BASE_URL=http://localhost:3000` for local.
+- `tests/e2e/admin-integration.spec.ts` — **NEW**. 14 focused integration tests covering login, every editor (Site Settings, Books, Testimonials, Podcast, Media, Local Blog Posts, Theme), Subscribers + Zapier config, and Logout. Uses `admin@hoc.com / !Texas1995` against the live Vercel deployment by default; `E2E_BASE_URL=http://localhost:3000` for local. All disposable records are stamped with the `E2E_` prefix and cleaned up by row match; the test never edits or deletes the first existing production row.
 - `tests/e2e/site-editor-full.spec.ts` — un-skipped Books add (now asserts the new book shows on `/books`), un-skipped Logout, replaced the brittle "search then click Show" test with one that verifies the visibility UI is fully wired without depending on WordPress post counts.
 - `tests/e2e/admin.spec.ts` — fixed a stale assertion (`Admin Login` → `Site Editor Login`).
 

@@ -13,6 +13,14 @@ test.setTimeout(120000)
  * backend. This is the focused regression suite for the June 8 + June
  * 10, 2026 fix passes.
  *
+ * Test isolation rule (June 10, 2026 — Public Content Recovery):
+ *   Every disposable record MUST use the `E2E_` prefix and be
+ *   cleaned up by clicking Delete on the row that matches that
+ *   stamp. The first existing production row in any editor list
+ *   must NEVER be edited or deleted by a test — the prior
+ *   "click first Delete" pattern in this file was unsafe against
+ *   a populated production database and is no longer permitted.
+ *
  * To run against a local dev server:
  *   E2E_BASE_URL=http://localhost:3000 npx playwright test admin-integration
  *
@@ -66,7 +74,7 @@ test.describe('Admin — Site Settings', () => {
     await login(page)
     await gotoSection(page, 'Site Settings')
     const stamp = Date.now()
-    const newValue = `TEST SITE NAME ${stamp}`
+    const newValue = `E2E_SITE_NAME_${stamp}`
     await page.fill('input[placeholder="The Homeownership Community"]', newValue)
     await page.click('button:has-text("Save Settings")')
     await expect(page.getByTestId('settings-save-message')).toContainText('Settings saved successfully!', { timeout: 15000 })
@@ -85,14 +93,14 @@ test.describe('Admin — Books', () => {
     page.on('dialog', d => d.accept())
 
     const stamp = Date.now()
-    const title = `TEST BOOK ${stamp}`
-    const newTitle = `TEST BOOK EDITED ${stamp}`
+    const title = `E2E_BOOK_${stamp}`
+    const newTitle = `E2E_BOOK_EDITED_${stamp}`
 
     // Add
     await page.click('button:has-text("+ Add Book")')
     await page.waitForSelector('input[placeholder="Book title..."]', { state: 'visible' })
     await page.fill('input[placeholder="Book title..."]', title)
-    await page.fill('input[placeholder="https://amazon.com/..."]', `https://amazon.com/dp/TEST${stamp}`)
+    await page.fill('input[placeholder="https://amazon.com/..."]', `https://amazon.com/dp/E2E${stamp}`)
     await page.click('button:has-text("Save Book")')
     await expect(page.locator(`h3:has-text("${title}")`)).toBeVisible({ timeout: 10000 })
 
@@ -119,8 +127,8 @@ test.describe('Admin — Testimonials', () => {
     page.on('dialog', d => d.accept())
 
     const stamp = Date.now()
-    const name = `TEST PERSON ${stamp}`
-    const newName = `TEST PERSON EDITED ${stamp}`
+    const name = `E2E_TESTIMONIAL_${stamp}`
+    const newName = `E2E_TESTIMONIAL_EDITED_${stamp}`
 
     // Add
     await page.click('button:has-text("+ Add Testimonial")')
@@ -152,13 +160,13 @@ test.describe('Admin — Podcast', () => {
     page.on('dialog', d => d.accept())
 
     const stamp = Date.now()
-    const title = `TEST EPISODE ${stamp}`
+    const title = `E2E_EPISODE_${stamp}`
 
     // Add
     await page.click('button:has-text("+ Add Episode")')
     await page.waitForSelector('input[placeholder="Episode title..."]', { state: 'visible' })
     await page.fill('input[placeholder="Episode title..."]', title)
-    await page.fill('input[placeholder="https://youtube.com/watch?v=..."]', `https://youtube.com/watch?v=TEST${stamp}`)
+    await page.fill('input[placeholder="https://youtube.com/watch?v=..."]', `https://youtube.com/watch?v=E2E${stamp}`)
     await page.click('button:has-text("Save")')
     await expect(page.locator(`h3:has-text("${title}")`)).toBeVisible({ timeout: 10000 })
 
@@ -183,12 +191,12 @@ test.describe('Admin — Media Library', () => {
     page.on('dialog', d => d.accept())
 
     const stamp = Date.now()
-    const name = `TEST MEDIA ${stamp}`
+    const name = `E2E_MEDIA_${stamp}`
 
     await page.click('button:has-text("+ Add Media")')
     await page.waitForSelector('input[placeholder="Image or PDF name"]', { state: 'visible' })
     await page.fill('input[placeholder="Image or PDF name"]', name)
-    await page.fill('input[placeholder="https://..."]', `https://example.com/test-${stamp}.png`)
+    await page.fill('input[placeholder="https://..."]', `https://example.com/e2e-${stamp}.png`)
     await page.click('button:has-text("Add Media")')
     await expect(page.locator(`p:has-text("${name}")`)).toBeVisible({ timeout: 10000 })
 
@@ -253,7 +261,7 @@ test.describe('Admin — Local Blog Posts', () => {
     page.on('dialog', d => d.accept())
 
     const stamp = Date.now()
-    const title = `TEST LOCAL POST ${stamp}`
+    const title = `E2E_LOCAL_POST_${stamp}`
 
     // Add
     await page.click('button:has-text("+ Add Post")')

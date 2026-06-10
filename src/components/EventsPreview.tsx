@@ -20,8 +20,13 @@ export default function EventsPreview() {
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
-      .then(data => {
-        if (data.theme_primary_color) {
+      .then(payload => {
+        // Unwrap the { data } envelope; fall back to the raw object in
+        // case the deployment is still serving the pre-envelope shape.
+        const data = payload?.data && typeof payload.data === 'object'
+          ? payload.data
+          : (payload && typeof payload === 'object' ? payload : null)
+        if (data?.theme_primary_color) {
           setPrimaryColor(data.theme_primary_color)
         }
       })
@@ -29,12 +34,13 @@ export default function EventsPreview() {
 
     fetch('/api/events')
       .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          const now = new Date()
-          const upcoming = data.filter(e => new Date(e.event_date) >= now)
-          setEvents(upcoming.slice(0, 3))
-        }
+      .then(payload => {
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data) ? payload.data : []
+        const now = new Date()
+        const upcoming = list.filter((e: Event) => new Date(e.event_date) >= now)
+        setEvents(upcoming.slice(0, 3))
         setLoading(false)
       })
       .catch(() => setLoading(false))
