@@ -1,128 +1,164 @@
-import { NextResponse } from 'next/server'
-import { getServerClient, getServiceRoleClient } from '@/lib/admin'
-
-async function requireAdmin() {
-  const supabase = await getServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { supabase: null, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
-  if (user.app_metadata?.role !== 'admin') {
-    return { supabase: null, error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-
-  const writeClient = getServiceRoleClient() ?? supabase
-  return { supabase: writeClient, error: null }
-}
+import {
+  badRequest,
+  notFound,
+  ok,
+  parsePartial,
+  newRequestId,
+  logServerOp,
+  withServerLog,
+} from '@/lib/api'
+import { getServiceRoleClient, getServerClient, requireAdminOrResponse } from '@/lib/admin'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const includeAll = searchParams.get('all') === '1' || searchParams.get('all') === 'true'
+  const requestId = newRequestId()
 
   if (includeAll) {
-    const { supabase, error } = await requireAdmin()
-    if (error) return error
-
-    const { data, error: dbError } = await supabase
-      .from('testimonials')
-      .select('*')
-
-    if (dbError) {
-      return NextResponse.json({ error: dbError.message }, { status: 500 })
-    }
-
-    return NextResponse.json(data || [])
+    const guard = await requireAdminOrResponse()
+    if (!guard.ok) return guard.response
+    return withServerLog(
+      { requestId, op: 'list_testimonials_all', table: 'testimonials', userId: guard.user.id },
+      async () => {
+        const { data, error } = await guard.supabase.from('testimonials').select('*')
+        if (error) {
+          logServerOp({ requestId, op: 'list_testimonials_all', table: 'testimonials', userId: guard.user.id, errorCode: error.code })
+          return ok([])
+        }
+        return ok(data || [])
+      },
+    )
   }
 
-  // Public read: anon client is fine because the public RLS policy
-  // already allows SELECT on rows where is_active = true.
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  // Public read: anon key client is fine because RLS exposes active rows.
+  const supabase = getServiceRoleClient() ?? (await getServerClient())
+  return withServerLog(
+    { requestId, op: 'list_testimonials_public', table: 'testimonials' },
+    async () => {
+      const { data, error } = await supabase
+        .from('testimonials')
+        .select('*')
+        .eq('is_active', true)
+      if (error) {
+        logServerOp({ requestId, op: 'list_testimonials_public', table: 'testimonials', errorCode: error.code })
+        return ok([])
+      }
+      return ok(data || [])
+    },
   )
-
-  const { data, error } = await supabase
-    .from('testimonials')
-    .select('*')
-    .eq('is_active', true)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data || [])
 }
 
 export async function POST(request: Request) {
-  const { supabase, error } = await requireAdmin()
-  if (error) return error
+  const guard = await requireAdminOrResponse()
+  if (!guard.ok) return guard.response
+  const requestId = newRequestId()
+  const body = await request.json().catch(() => null)
+  if (!body || typeof body !== 'object') return badRequest('Body must be a JSON object')
+  const { name, quote } = body as { name?: string; quote?: string }
+  if (!name || !quote) return badRequest('name and quote required')
 
-  const { name, quote, role, is_active } = await request.json()
-
-  if (!name || !quote) {
-    return NextResponse.json({ error: 'Name and quote required' }, { status: 400 })
-  }
-
-  const { data, error: dbError } = await supabase
-    .from('testimonials')
-    .insert([{ name, quote, role, is_active: is_active ?? true }])
-    .select()
-    .single()
-
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
+  return withServerLog(
+    { requestId, op: 'create_testimonial', table: 'testimonials', userId: guard.user.id },
+    async () => {
+      const { data, error } = await guard.supabase
+        .from('testimonials')
+        .insert([{
+          name,
+          quote,
+          role: (body as { role?: string }).role,
+          is_active: (body as { is_active?: boolean }).is_active ?? true,
+        }])
+        .select()
+        .single()
+      if (error || !data) {
+        logServerOp({ requestId, op: 'create_testimonial', table: 'testimonials', userId: guard.user.id, errorCode: error?.code })
+        return badRequest(error?.message ?? 'Insert failed')
+      }
+      return ok(data, 'Testimonial created')
+    },
+  )
 }
 
 export async function PUT(request: Request) {
-  const { supabase, error } = await requireAdmin()
-  if (error) return error
+  const guard = await requireAdminOrResponse()
+  if (!guard.ok) return guard.response
+  const requestId = newRequestId()
+  const body = (await request.json().catch(() => null)) as { id?: string; [k: string]: unknown } | null
+  if (!body?.id) return badRequest('id required')
 
-  const { id, name, quote, role, is_active } = await request.json()
+  return withServerLog(
+    { requestId, op: 'replace_testimonial', table: 'testimonials', recordId: body.id, userId: guard.user.id },
+    async () => {
+      const { data, error } = await guard.supabase
+        .from('testimonials')
+        .update({ name: body.name, quote: body.quote, role: body.role, is_active: body.is_active })
+        .eq('id', body.id)
+        .select()
+        .single()
+      if (error || !data) {
+        logServerOp({ requestId, op: 'replace_testimonial', table: 'testimonials', recordId: body.id, userId: guard.user.id, errorCode: error?.code })
+        return error ? badRequest(error.message) : notFound('Testimonial')
+      }
+      return ok(data, 'Testimonial updated')
+    },
+  )
+}
 
-  if (!id) {
-    return NextResponse.json({ error: 'Testimonial ID required' }, { status: 400 })
+export async function PATCH(request: Request) {
+  const guard = await requireAdminOrResponse()
+  if (!guard.ok) return guard.response
+  const requestId = newRequestId()
+  const body = await request.json().catch(() => null)
+  if (!body || typeof body !== 'object') return badRequest('Body must be a JSON object')
+  const { id, ...rest } = body as { id?: string; [k: string]: unknown }
+  if (!id) return badRequest('id required')
+
+  const { patch, ignored } = parsePartial<Record<string, unknown>>(rest, [
+    'name', 'quote', 'role', 'is_active',
+  ] as const)
+  if (Object.keys(patch).length === 0) {
+    return badRequest('No writable fields supplied', { ignored })
   }
 
-  const { data, error: dbError } = await supabase
-    .from('testimonials')
-    .update({ name, quote, role, is_active })
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
+  return withServerLog(
+    { requestId, op: 'patch_testimonial', table: 'testimonials', recordId: id, userId: guard.user.id, meta: { ignored } },
+    async () => {
+      const { data, error } = await guard.supabase
+        .from('testimonials')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error || !data) {
+        logServerOp({ requestId, op: 'patch_testimonial', table: 'testimonials', recordId: id, userId: guard.user.id, errorCode: error?.code })
+        return error ? badRequest(error.message) : notFound('Testimonial')
+      }
+      return ok(data, 'Testimonial updated')
+    },
+  )
 }
 
 export async function DELETE(request: Request) {
-  const { supabase, error } = await requireAdmin()
-  if (error) return error
+  const guard = await requireAdminOrResponse()
+  if (!guard.ok) return guard.response
+  const requestId = newRequestId()
+  const body = (await request.json().catch(() => null)) as { id?: string } | null
+  if (!body?.id) return badRequest('id required')
 
-  const { id } = await request.json()
-
-  if (!id) {
-    return NextResponse.json({ error: 'Testimonial ID required' }, { status: 400 })
-  }
-
-  // Soft delete to match the editor's existing behavior: it sets
-  // is_active=false rather than removing the row.
-  const { error: dbError } = await supabase
-    .from('testimonials')
-    .update({ is_active: false })
-    .eq('id', id)
-
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
+  return withServerLog(
+    { requestId, op: 'soft_delete_testimonial', table: 'testimonials', recordId: body.id, userId: guard.user.id },
+    async () => {
+      const { data, error } = await guard.supabase
+        .from('testimonials')
+        .update({ is_active: false })
+        .eq('id', body.id)
+        .select('id')
+        .single()
+      if (error || !data) {
+        logServerOp({ requestId, op: 'soft_delete_testimonial', table: 'testimonials', recordId: body.id, userId: guard.user.id, errorCode: error?.code })
+        return error ? badRequest(error.message) : notFound('Testimonial')
+      }
+      return ok({ id: body.id }, 'Testimonial deactivated')
+    },
+  )
 }

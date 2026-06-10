@@ -1,134 +1,171 @@
-import { NextResponse } from 'next/server'
-import { getServerClient, getServiceRoleClient } from '@/lib/admin'
-
-async function requireAdmin() {
-  const supabase = await getServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { supabase: null, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
-  if (user.app_metadata?.role !== 'admin') {
-    return { supabase: null, error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-
-  const writeClient = getServiceRoleClient() ?? supabase
-  return { supabase: writeClient, error: null }
-}
+import {
+  badRequest,
+  notFound,
+  ok,
+  parsePartial,
+  newRequestId,
+  logServerOp,
+  withServerLog,
+} from '@/lib/api'
+import { getServiceRoleClient, getServerClient, requireAdminOrResponse } from '@/lib/admin'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const includeAll = searchParams.get('all') === '1' || searchParams.get('all') === 'true'
+  const requestId = newRequestId()
 
   if (includeAll) {
-    const { supabase, error } = await requireAdmin()
-    if (error) return error
-
-    const { data, error: dbError } = await supabase
-      .from('podcast_episodes')
-      .select('*')
-
-    if (dbError) {
-      return NextResponse.json({ error: dbError.message }, { status: 500 })
-    }
-
-    return NextResponse.json(data || [])
+    const guard = await requireAdminOrResponse()
+    if (!guard.ok) return guard.response
+    return withServerLog(
+      { requestId, op: 'list_podcast_all', table: 'podcast_episodes', userId: guard.user.id },
+      async () => {
+        const { data, error } = await guard.supabase.from('podcast_episodes').select('*')
+        if (error) {
+          logServerOp({ requestId, op: 'list_podcast_all', table: 'podcast_episodes', userId: guard.user.id, errorCode: error.code })
+          return ok([])
+        }
+        return ok(data || [])
+      },
+    )
   }
 
-  // Public read: anon client is fine because the public RLS policy
-  // already allows SELECT on rows where is_visible = true.
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabase = getServiceRoleClient() ?? (await getServerClient())
+  return withServerLog(
+    { requestId, op: 'list_podcast_public', table: 'podcast_episodes' },
+    async () => {
+      const { data, error } = await supabase
+        .from('podcast_episodes')
+        .select('*')
+        .eq('is_visible', true)
+        .order('episode_number', { ascending: true })
+      if (error) {
+        logServerOp({ requestId, op: 'list_podcast_public', table: 'podcast_episodes', errorCode: error.code })
+        return ok([])
+      }
+      return ok(data || [])
+    },
   )
-
-  const { data, error } = await supabase
-    .from('podcast_episodes')
-    .select('*')
-    .eq('is_visible', true)
-    .order('episode_number', { ascending: true })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data || [])
 }
 
 export async function POST(request: Request) {
-  const { supabase, error } = await requireAdmin()
-  if (error) return error
+  const guard = await requireAdminOrResponse()
+  if (!guard.ok) return guard.response
+  const requestId = newRequestId()
+  const body = await request.json().catch(() => null)
+  if (!body || typeof body !== 'object') return badRequest('Body must be a JSON object')
+  const { title, youtube_url } = body as { title?: string; youtube_url?: string }
+  if (!title || !youtube_url) return badRequest('title and youtube_url required')
 
-  const { title, description, youtube_url, episode_number, is_visible, published_at } = await request.json()
-
-  if (!title || !youtube_url) {
-    return NextResponse.json({ error: 'Title and YouTube URL required' }, { status: 400 })
-  }
-
-  const { data, error: dbError } = await supabase
-    .from('podcast_episodes')
-    .insert([{
-      title,
-      description,
-      youtube_url,
-      episode_number: episode_number || null,
-      is_visible: is_visible ?? true,
-      published_at: published_at || new Date().toISOString(),
-    }])
-    .select()
-    .single()
-
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
+  return withServerLog(
+    { requestId, op: 'create_podcast', table: 'podcast_episodes', userId: guard.user.id },
+    async () => {
+      const { data, error } = await guard.supabase
+        .from('podcast_episodes')
+        .insert([{
+          title,
+          description: (body as { description?: string }).description,
+          youtube_url,
+          episode_number: (body as { episode_number?: number }).episode_number || null,
+          is_visible: (body as { is_visible?: boolean }).is_visible ?? true,
+          published_at: (body as { published_at?: string }).published_at || new Date().toISOString(),
+        }])
+        .select()
+        .single()
+      if (error || !data) {
+        logServerOp({ requestId, op: 'create_podcast', table: 'podcast_episodes', userId: guard.user.id, errorCode: error?.code })
+        return badRequest(error?.message ?? 'Insert failed')
+      }
+      return ok(data, 'Episode created')
+    },
+  )
 }
 
 export async function PUT(request: Request) {
-  const { supabase, error } = await requireAdmin()
-  if (error) return error
+  const guard = await requireAdminOrResponse()
+  if (!guard.ok) return guard.response
+  const requestId = newRequestId()
+  const body = (await request.json().catch(() => null)) as { id?: string; [k: string]: unknown } | null
+  if (!body?.id) return badRequest('id required')
 
-  const { id, title, description, youtube_url, episode_number, is_visible, published_at } = await request.json()
+  return withServerLog(
+    { requestId, op: 'replace_podcast', table: 'podcast_episodes', recordId: body.id, userId: guard.user.id },
+    async () => {
+      const { data, error } = await guard.supabase
+        .from('podcast_episodes')
+        .update({
+          title: body.title,
+          description: body.description,
+          youtube_url: body.youtube_url,
+          episode_number: body.episode_number,
+          is_visible: body.is_visible,
+          published_at: body.published_at,
+        })
+        .eq('id', body.id)
+        .select()
+        .single()
+      if (error || !data) {
+        logServerOp({ requestId, op: 'replace_podcast', table: 'podcast_episodes', recordId: body.id, userId: guard.user.id, errorCode: error?.code })
+        return error ? badRequest(error.message) : notFound('Episode')
+      }
+      return ok(data, 'Episode updated')
+    },
+  )
+}
 
-  if (!id) {
-    return NextResponse.json({ error: 'Episode ID required' }, { status: 400 })
+export async function PATCH(request: Request) {
+  const guard = await requireAdminOrResponse()
+  if (!guard.ok) return guard.response
+  const requestId = newRequestId()
+  const body = await request.json().catch(() => null)
+  if (!body || typeof body !== 'object') return badRequest('Body must be a JSON object')
+  const { id, ...rest } = body as { id?: string; [k: string]: unknown }
+  if (!id) return badRequest('id required')
+
+  const { patch, ignored } = parsePartial<Record<string, unknown>>(rest, [
+    'title', 'description', 'youtube_url', 'episode_number', 'is_visible', 'published_at',
+  ] as const)
+  if (Object.keys(patch).length === 0) {
+    return badRequest('No writable fields supplied', { ignored })
   }
 
-  const { data, error: dbError } = await supabase
-    .from('podcast_episodes')
-    .update({ title, description, youtube_url, episode_number, is_visible, published_at })
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
+  return withServerLog(
+    { requestId, op: 'patch_podcast', table: 'podcast_episodes', recordId: id, userId: guard.user.id, meta: { ignored } },
+    async () => {
+      const { data, error } = await guard.supabase
+        .from('podcast_episodes')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error || !data) {
+        logServerOp({ requestId, op: 'patch_podcast', table: 'podcast_episodes', recordId: id, userId: guard.user.id, errorCode: error?.code })
+        return error ? badRequest(error.message) : notFound('Episode')
+      }
+      return ok(data, 'Episode updated')
+    },
+  )
 }
 
 export async function DELETE(request: Request) {
-  const { supabase, error } = await requireAdmin()
-  if (error) return error
+  const guard = await requireAdminOrResponse()
+  if (!guard.ok) return guard.response
+  const requestId = newRequestId()
+  const body = (await request.json().catch(() => null)) as { id?: string } | null
+  if (!body?.id) return badRequest('id required')
 
-  const { id } = await request.json()
-
-  if (!id) {
-    return NextResponse.json({ error: 'Episode ID required' }, { status: 400 })
-  }
-
-  const { error: dbError } = await supabase
-    .from('podcast_episodes')
-    .delete()
-    .eq('id', id)
-
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
+  return withServerLog(
+    { requestId, op: 'delete_podcast', table: 'podcast_episodes', recordId: body.id, userId: guard.user.id },
+    async () => {
+      const { error } = await guard.supabase
+        .from('podcast_episodes')
+        .delete()
+        .eq('id', body.id)
+      if (error) {
+        logServerOp({ requestId, op: 'delete_podcast', table: 'podcast_episodes', recordId: body.id, userId: guard.user.id, errorCode: error.code })
+        return badRequest(error.message)
+      }
+      return ok({ id: body.id }, 'Episode deleted')
+    },
+  )
 }

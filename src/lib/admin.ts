@@ -70,6 +70,38 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 /**
+ * Shared admin guard. Returns the authenticated user + a write-capable
+ * Supabase client, or a 401/403 NextResponse. Use this from every admin
+ * route handler so the failure mode is consistent.
+ */
+export interface AdminContext {
+  user: { id: string; email: string | null; role: string }
+  supabase: NonNullable<ReturnType<typeof getServiceRoleClient>> | Awaited<ReturnType<typeof getServerClient>>
+}
+
+export async function requireAdminOrResponse(): Promise<
+  | { ok: true; user: AdminContext['user']; supabase: AdminContext['supabase'] }
+  | { ok: false; response: import('next/server').NextResponse }
+> {
+  const authClient = await getServerClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) {
+    const { unauthorized } = await import('./api')
+    return { ok: false, response: unauthorized() }
+  }
+  if (user.app_metadata?.role !== 'admin') {
+    const { forbidden } = await import('./api')
+    return { ok: false, response: forbidden() }
+  }
+  const writeClient = getServiceRoleClient() ?? authClient
+  return {
+    ok: true,
+    user: { id: user.id, email: user.email ?? null, role: 'admin' },
+    supabase: writeClient as AdminContext['supabase'],
+  }
+}
+
+/**
  * Self-heal: if the authenticated user's email is on the allowlist but
  * their JWT doesn't carry app_metadata.role === 'admin', patch the
  * user's app_metadata using the service-role client. The user will
