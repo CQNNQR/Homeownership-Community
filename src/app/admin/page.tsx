@@ -274,6 +274,17 @@ export default function SiteEditor() {
           >
             Theme
           </button>
+          <button
+            onClick={() => setActiveSection('health')}
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+              activeSection === 'health'
+                ? 'border-red-700 text-red-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+            data-testid="tab-health"
+          >
+            Backend Health
+          </button>
         </div>
       </nav>
 
@@ -655,6 +666,11 @@ export default function SiteEditor() {
         {/* Theme Section */}
         {activeSection === 'theme' && (
           <ThemeEditor />
+        )}
+
+        {/* Backend Health Section */}
+        {activeSection === 'health' && (
+          <BackendHealth />
         )}
       </main>
     </div>
@@ -2212,17 +2228,47 @@ function SubscribersManager() {
   const [exporting, setExporting] = useState(false)
   const [showZapier, setShowZapier] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [jobs, setJobs] = useState<any[]>([])
+  const [jobsLoading, setJobsLoading] = useState(false)
+  const [jobsError, setJobsError] = useState('')
+  const [retryingId, setRetryingId] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
     fetchSubscribers()
+    fetchJobs()
   }, [])
 
   const fetchSubscribers = async () => {
     const res = await fetch('/api/subscribers')
     const data = await res.json()
-    setSubscribers(Array.isArray(data) ? data : [])
+    setSubscribers(Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []))
     setLoading(false)
+  }
+
+  const fetchJobs = async () => {
+    setJobsLoading(true)
+    setJobsError('')
+    try {
+      const res = await fetch('/api/admin/integrations/zapier/jobs?limit=25', { cache: 'no-store' })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error?.message || 'Failed to fetch jobs')
+      setJobs(body?.data?.jobs || [])
+    } catch (e) {
+      setJobsError(e instanceof Error ? e.message : 'Failed to fetch jobs')
+    } finally {
+      setJobsLoading(false)
+    }
+  }
+
+  const retryJob = async (id: string) => {
+    setRetryingId(id)
+    try {
+      await fetch(`/api/admin/integrations/zapier/jobs/${id}/retry`, { method: 'POST' })
+      await fetchJobs()
+    } finally {
+      setRetryingId(null)
+    }
   }
 
   const exportToCSV = () => {
@@ -2320,6 +2366,73 @@ function SubscribersManager() {
         </div>
       </div>
 
+      {/* Lead delivery jobs (the new Zapier outbox) */}
+      <div className="bg-white rounded-xl shadow overflow-hidden" data-testid="delivery-jobs">
+        <div className="px-4 sm:px-6 py-4 border-b flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-black">Zapier Delivery Queue</h3>
+            <p className="text-xs text-gray-500">Most recent 25 lead-delivery attempts. Failed jobs auto-retry with exponential backoff.</p>
+          </div>
+          <button
+            onClick={fetchJobs}
+            disabled={jobsLoading}
+            className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg disabled:opacity-50"
+            data-testid="jobs-refresh"
+          >
+            {jobsLoading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
+        {jobsError && (
+          <div className="bg-red-50 border-b border-red-200 text-red-700 px-4 py-3 text-sm">{jobsError}</div>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-xs font-medium text-gray-700">Status</th>
+                <th className="px-4 py-2 text-xs font-medium text-gray-700">Source</th>
+                <th className="px-4 py-2 text-xs font-medium text-gray-700">Attempts</th>
+                <th className="px-4 py-2 text-xs font-medium text-gray-700">Last error</th>
+                <th className="px-4 py-2 text-xs font-medium text-gray-700">Next attempt</th>
+                <th className="px-4 py-2 text-xs font-medium text-gray-700"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {jobs.length === 0 && !jobsLoading && (
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500 text-sm">No delivery jobs yet — submit a lead from the public site to see one appear here.</td></tr>
+              )}
+              {jobs.map((j) => {
+                const statusColor = {
+                  delivered: 'bg-green-100 text-green-700',
+                  pending: 'bg-amber-100 text-amber-700',
+                  in_flight: 'bg-blue-100 text-blue-700',
+                  failed: 'bg-red-100 text-red-700',
+                  dead: 'bg-gray-200 text-gray-700',
+                }[j.status as string] || 'bg-gray-100 text-gray-700'
+                return (
+                  <tr key={j.id}>
+                    <td className="px-4 py-2 text-xs"><span className={`px-2 py-0.5 rounded-full font-medium ${statusColor}`}>{j.status}</span></td>
+                    <td className="px-4 py-2 text-xs text-gray-700">{(j.payload as any)?.source || '—'}</td>
+                    <td className="px-4 py-2 text-xs text-gray-700">{j.attempt_count} / {j.max_attempts}</td>
+                    <td className="px-4 py-2 text-xs text-red-700 truncate max-w-xs" title={j.last_error || ''}>{j.last_error || '—'}</td>
+                    <td className="px-4 py-2 text-xs text-gray-600">{j.next_attempt_at ? new Date(j.next_attempt_at).toLocaleString() : '—'}</td>
+                    <td className="px-4 py-2 text-xs text-right">
+                      <button
+                        onClick={() => retryJob(j.id)}
+                        disabled={retryingId === j.id}
+                        className="text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50"
+                      >
+                        {retryingId === j.id ? 'Retrying…' : 'Retry'}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {mounted && showZapier && createPortal(
         <ZapierConfigModal
           onClose={() => { setShowZapier(false); fetchSubscribers() }}
@@ -2331,43 +2444,26 @@ function SubscribersManager() {
 }
 
 function ZapierConfigModal({ onClose }: { onClose: () => void }) {
-  // Zapier config reads/writes a small set of site_settings keys
-  // (zapier_webhook_url, zapier_last_sent_at, zapier_last_result).
-  // All access goes through the admin-gated /api/settings endpoint
-  // so the anon Supabase client never touches site_settings.
-  const [webhookUrl, setWebhookUrl] = useState('')
-  const [initialUrl, setInitialUrl] = useState('')
+  // The Zapier webhook URL is now a server-only env var
+  // (ZAPIER_WEBHOOK_URL) — no longer stored in site_settings where
+  // the anon Supabase client could read it. This modal is now a
+  // status + connectivity panel: it shows whether the webhook is
+  // configured on the server and tests it through the
+  // admin-gated /api/admin/integrations/zapier/test endpoint so the
+  // browser never holds the URL directly.
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [message, setMessage] = useState('')
-  const [testResult, setTestResult] = useState<{ ok: boolean; status?: number; error?: string } | null>(null)
-  const [lastSentAt, setLastSentAt] = useState<string | null>(null)
-  const [lastResult, setLastResult] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<{
+    ok: boolean
+    status?: number | null
+    error?: string | null
+    duration_ms?: number
+    webhook_configured?: boolean
+  } | null>(null)
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/api/settings', { credentials: 'include' })
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          setMessage(`Failed to load: ${data.error || res.statusText}`)
-          return
-        }
-        const data: Record<string, string> = await res.json()
-        const url = data.zapier_webhook_url || ''
-        setWebhookUrl(url)
-        setInitialUrl(url)
-        setLastSentAt(data.zapier_last_sent_at || null)
-        setLastResult(data.zapier_last_result || null)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error'
-        setMessage(`Failed to load: ${msg}`)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -2376,126 +2472,30 @@ function ZapierConfigModal({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const persistSetting = async (key: string, value: string | null) => {
-    const res = await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify([{ key, value: value ?? '' }]),
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      throw new Error(data.error || `HTTP ${res.status}`)
-    }
-  }
-
-  // persistMeta used to be a fire-and-forget upsert; preserve that
-  // semantic so the test handler can keep calling it without await
-  // errors leaking out. We just log failures to the inline message.
-  const persistMeta = async (key: string, value: string | null) => {
-    try {
-      await persistSetting(key, value)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      setMessage(`Failed to persist ${key}: ${msg}`)
-    }
-  }
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-    setMessage('')
-
-    const value = webhookUrl.trim()
-    if (value && !/^https?:\/\//i.test(value)) {
-      setMessage('Webhook URL must start with http:// or https://')
-      setSaving(false)
-      return
-    }
-
-    try {
-      await persistSetting('zapier_webhook_url', value)
-      setInitialUrl(value)
-      setMessage(value ? 'Webhook saved.' : 'Webhook cleared.')
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      setMessage(`Failed to save: ${msg}`)
-    } finally {
-      setSaving(false)
-      setTimeout(() => setMessage(''), 3000)
-    }
-  }
-
-  const handleClear = async () => {
-    setSaving(true)
-    setMessage('')
-    try {
-      await persistSetting('zapier_webhook_url', '')
-      setWebhookUrl('')
-      setInitialUrl('')
-      setMessage('Webhook cleared.')
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      setMessage(`Failed to clear: ${msg}`)
-    } finally {
-      setSaving(false)
-      setTimeout(() => setMessage(''), 3000)
-    }
-  }
-
   const handleTest = async () => {
-    const value = webhookUrl.trim()
-    if (!value) {
-      setTestResult({ ok: false, error: 'Save a webhook URL first.' })
-      return
-    }
-    if (!/^https?:\/\//i.test(value)) {
-      setTestResult({ ok: false, error: 'Webhook URL must start with http:// or https://' })
-      return
-    }
-
     setTesting(true)
     setTestResult(null)
     setMessage('')
-
-    const payload = {
-      email: 'test@example.com',
-      first_name: 'Test',
-      last_name: 'Lead',
-      phone: '+15555550100',
-      source: 'admin_test',
-      created_at: new Date().toISOString(),
-      note: 'This is a test lead from the Homeownership Community admin.',
-    }
-
     try {
-      const res = await fetch(value, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const text = await res.text().catch(() => '')
-      setTestResult({ ok: res.ok, status: res.status, error: res.ok ? undefined : (text || `HTTP ${res.status}`) })
-      const nowIso = new Date().toISOString()
-      setLastSentAt(nowIso)
-      const resultLabel = res.ok ? `OK (${res.status})` : `Failed (${res.status})`
-      setLastResult(resultLabel)
-      await persistMeta('zapier_last_sent_at', nowIso)
-      await persistMeta('zapier_last_result', resultLabel)
+      const res = await fetch('/api/admin/integrations/zapier/test', { method: 'POST', credentials: 'include' })
+      const body = await res.json()
+      if (!res.ok) {
+        setTestResult({ ok: false, error: body?.error?.message || `HTTP ${res.status}` })
+        setMessage('Test failed — check the error below.')
+      } else {
+        setTestResult(body.data || body)
+        setMessage(body?.data?.ok ? 'Zapier webhook is reachable.' : 'Zapier webhook is NOT reachable.')
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error'
       setTestResult({ ok: false, error: errorMsg })
-      const nowIso = new Date().toISOString()
-      setLastSentAt(nowIso)
-      setLastResult(`Error: ${errorMsg}`)
-      await persistMeta('zapier_last_sent_at', nowIso)
-      await persistMeta('zapier_last_result', `Error: ${errorMsg}`)
+      setMessage('Test request failed.')
     } finally {
       setTesting(false)
     }
   }
 
-  const isConfigured = initialUrl.length > 0
+  const isConfigured = testResult?.ok === true
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
@@ -2527,8 +2527,8 @@ function ZapierConfigModal({ onClose }: { onClose: () => void }) {
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
             <span className="text-sm text-gray-600">Status</span>
-            <span className={`text-xs px-2 py-1 rounded-full font-medium ${isConfigured ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-              {isConfigured ? 'Connected' : 'Not configured'}
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${testResult?.ok ? 'bg-green-100 text-green-700' : testResult ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-600'}`}>
+              {testResult?.ok ? 'Connected' : testResult ? 'Unreachable' : 'Not tested'}
             </span>
           </div>
 
@@ -2536,79 +2536,38 @@ function ZapierConfigModal({ onClose }: { onClose: () => void }) {
             <div className="text-center py-6 text-gray-500 text-sm">Loading...</div>
           ) : (
             <>
-              <form onSubmit={handleSave} className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Webhook URL
-                  </label>
-                  <input
-                    type="url"
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black text-sm font-mono focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700"
-                    placeholder="https://hooks.zapier.com/hooks/catch/..."
-                    inputMode="url"
-                    autoComplete="off"
-                  />
-                  <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-                    In Zapier: create a Zap with <strong>Webhooks by Zapier</strong> (Catch Hook) as the trigger, copy the URL, then add a <strong>GoHighLevel</strong> &ldquo;Create Contact&rdquo; action mapped to the fields below.
-                  </p>
-                </div>
+              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 space-y-2">
+                <p>
+                  The Zapier webhook URL is now a server-only environment variable (<code className="font-mono bg-white px-1 rounded">ZAPIER_WEBHOOK_URL</code>) instead of being stored in <code className="font-mono bg-white px-1 rounded">site_settings</code>.
+                </p>
+                <p>
+                  Set it in the Vercel project env (or your <code className="font-mono bg-white px-1 rounded">.env.local</code> for local dev) and re-run the test below to confirm connectivity.
+                </p>
+              </div>
 
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex-1 bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleTest}
-                    disabled={testing || !webhookUrl.trim()}
-                    className="flex-1 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
-                  >
-                    {testing ? 'Sending...' : 'Send Test Lead'}
-                  </button>
-                  {isConfigured && (
-                    <button
-                      type="button"
-                      onClick={handleClear}
-                      disabled={saving}
-                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </form>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={handleTest}
+                  disabled={testing}
+                  className="flex-1 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
+                  data-testid="zapier-test-btn"
+                >
+                  {testing ? 'Testing…' : 'Test Webhook'}
+                </button>
+              </div>
 
               {message && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded-lg text-sm" data-testid="zapier-message">
                   {message}
                 </div>
               )}
 
               {testResult && (
-                <div className={`px-3 py-2 rounded-lg text-sm ${testResult.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                <div className={`px-3 py-2 rounded-lg text-sm ${testResult.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`} data-testid="zapier-result">
                   {testResult.ok
-                    ? `Test lead sent${testResult.status ? ` (HTTP ${testResult.status})` : ''}. Check your Zap or GoHighLevel.`
-                    : `Failed${testResult.status ? ` (HTTP ${testResult.status})` : ''}: ${testResult.error || 'Unknown error'}`}
-                </div>
-              )}
-
-              {(lastSentAt || lastResult) && (
-                <div className="text-xs text-gray-500 space-y-0.5 pt-2 border-t border-gray-100">
-                  {lastSentAt && <p>Last test: {new Date(lastSentAt).toLocaleString()}</p>}
-                  {lastResult && (
-                    <p>
-                      Last result:{' '}
-                      <span className={lastResult.startsWith('OK') ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
-                        {lastResult}
-                      </span>
-                    </p>
-                  )}
+                    ? `Zapier reachable${testResult.status ? ` (HTTP ${testResult.status})` : ''} in ${testResult.duration_ms ?? '?'}ms.`
+                    : `Unreachable${testResult.status ? ` (HTTP ${testResult.status})` : ''}: ${testResult.error || 'Unknown error'}`}
                 </div>
               )}
 
@@ -2625,7 +2584,7 @@ function ZapierConfigModal({ onClose }: { onClose: () => void }) {
   "created_at": "2026-06-08T15:30:00.000Z"
 }`}</pre>
                 <p className="text-xs text-gray-500 mt-2">
-                  <code className="bg-gray-100 px-1 rounded">source</code> is <code className="bg-gray-100 px-1 rounded">nav_modal</code> for the navigation &ldquo;Join Community&rdquo; form.
+                  <code className="bg-gray-100 px-1 rounded">source</code> is <code className="bg-gray-100 px-1 rounded">nav_modal</code> for the navigation &ldquo;Join Community&rdquo; form, or <code className="bg-gray-100 px-1 rounded">resources-reverse-mortgage</code> for the Resources purchase modal.
                 </p>
               </details>
             </>
@@ -3065,6 +3024,111 @@ function PodcastEditor() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function BackendHealth() {
+  const [report, setReport] = useState<{
+    checked_at: string
+    schema: { ok: boolean; schema_version: string | null; missing_tables: string[]; missing_columns: Array<{ table: string; column: string }> }
+    env: Record<string, { configured: boolean }>
+    queue: { pending: number; in_flight: number; delivered: number; failed: number; dead: number; last_delivery_at: string | null }
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const load = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/health', { cache: 'no-store' })
+      const body = await res.json()
+      if (!res.ok) {
+        setError(body?.error?.message || 'Failed to fetch health report')
+        return
+      }
+      setReport(body.data || body)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  return (
+    <div className="space-y-6" data-testid="backend-health">
+      <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-black">Backend Health</h2>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg disabled:opacity-50"
+            data-testid="health-refresh"
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-4" data-testid="health-error">
+            {error}
+          </div>
+        )}
+        {report && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Schema</h3>
+                <div className={`text-sm font-medium ${report.schema.ok ? 'text-green-700' : 'text-red-700'}`}>
+                  {report.schema.ok ? '✓ All required tables/columns present' : '✗ Schema drift detected'}
+                </div>
+                {report.schema.schema_version && (
+                  <p className="text-xs text-gray-500 mt-1">Version: {report.schema.schema_version}</p>
+                )}
+                {!report.schema.ok && (
+                  <ul className="text-xs text-red-700 mt-2 space-y-1">
+                    {report.schema.missing_tables.map((t) => <li key={t}>Missing table: {t}</li>)}
+                    {report.schema.missing_columns.map((c) => (
+                      <li key={`${c.table}.${c.column}`}>Missing column: {c.table}.{c.column}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Lead Delivery Queue</h3>
+                <div className="grid grid-cols-5 gap-2 text-center">
+                  {(['pending', 'in_flight', 'delivered', 'failed', 'dead'] as const).map((status) => (
+                    <div key={status}>
+                      <div className={`text-lg font-bold ${
+                        status === 'dead' || status === 'failed' ? 'text-red-700' :
+                        status === 'pending' ? 'text-amber-700' : 'text-green-700'
+                      }`}>{report.queue[status]}</div>
+                      <div className="text-[10px] uppercase text-gray-500">{status}</div>
+                    </div>
+                  ))}
+                </div>
+                {report.queue.last_delivery_at && (
+                  <p className="text-xs text-gray-500 mt-2">Last delivery: {new Date(report.queue.last_delivery_at).toLocaleString()}</p>
+                )}
+              </div>
+            </div>
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Environment</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                {Object.entries(report.env).map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${v.configured ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="font-mono text-gray-700">{k}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
