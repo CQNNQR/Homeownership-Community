@@ -112,7 +112,7 @@ export default async function Home() {
         <section className="py-16 bg-gradient-to-b from-pink-50 to-gray-100">
           <div className="max-w-4xl mx-auto px-4">
             <img
-              src="/assets/join the community.png"
+              src="/assets/join the community.webp"
               alt="Join The Home Ownership Community - We Create Owners"
               className="w-full rounded-xl shadow-2xl"
             />

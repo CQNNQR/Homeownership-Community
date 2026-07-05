@@ -1,85 +1,28 @@
-'use client'
-
-import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
+import type { Metadata } from 'next'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { normalizePost } from '@/lib/utils'
+import BlogList from '@/components/BlogList'
+import { SITE_URL } from '@/lib/site-config'
 
-interface Post {
-  id: string
-  slug: string
-  title: string
-  excerpt: string
-  date: string
-  image: string | null
-  imageAlt: string
-  category: string
-  readingTime: string
+export const revalidate = 10
+
+export const metadata: Metadata = {
+  title: 'Real Estate Investing & Homeownership Blog',
+  description:
+    'Expert insights on real estate investing, first-time home buying, rental property, and building generational wealth.',
+  alternates: {
+    canonical: `${SITE_URL}/blog`,
+  },
+  openGraph: {
+    title: 'Real Estate Investing & Homeownership Blog | HOC',
+    description:
+      'Expert insights on real estate investing, first-time home buying, rental property, and building generational wealth.',
+    url: `${SITE_URL}/blog`,
+    type: 'website',
+  },
 }
-
-interface APIResponse {
-  posts: any[]
-  pageInfo: {
-    totalPages: number
-    currentPage: number
-  }
-}
-
-const POSTS_PER_PAGE = 6
 
 export default function BlogPage() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
-
-  const fetchPosts = useCallback(async (page: number) => {
-    try {
-      const response = await fetch(`/api/posts?page=${page}&perPage=${POSTS_PER_PAGE}`)
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch')
-      }
-
-      const data: APIResponse = await response.json()
-      const normalizedPosts = data.posts.map(normalizePost)
-
-      if (page > 1) {
-        setPosts(prev => [...prev, ...normalizedPosts])
-      } else {
-        setPosts(normalizedPosts)
-      }
-      setHasMore(data.pageInfo.totalPages > page)
-      setCurrentPage(page)
-      setError(null)
-    } catch (err) {
-      setError('Unable to load blog posts. Please try again later.')
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchPosts(1)
-  }, [fetchPosts])
-
-  function loadMore() {
-    if (hasMore && !loadingMore && !error) {
-      setLoadingMore(true)
-      fetchPosts(currentPage + 1)
-    }
-  }
-
-  function retry() {
-    setLoading(true)
-    setError(null)
-    fetchPosts(1)
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <Navigation />
@@ -94,103 +37,10 @@ export default function BlogPage() {
         </div>
       </section>
 
-      {/* Blog Grid */}
+      {/* Blog Grid (client island for pagination + load-more) */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {loading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
-                  <div className="h-56 bg-gray-200" />
-                  <div className="p-6">
-                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-4" />
-                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4" />
-                    <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-                    <div className="h-4 bg-gray-200 rounded w-2/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : error ? (
-            <div className="text-center py-16">
-              <p className="text-gray-600 mb-4">{error}</p>
-              <button
-                onClick={retry}
-                className="text-red-700 hover:text-red-800 font-semibold"
-              >
-                Try Again
-              </button>
-            </div>
-          ) : posts.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-gray-600">No blog posts found.</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {posts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/blog/${post.slug}`}
-                    className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow block"
-                  >
-                    <div className="h-56 bg-gray-200 relative">
-                      {post.image ? (
-                        <img
-                          src={post.image}
-                          alt={post.imageAlt}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <img
-                          src="/LOGO/15002.png"
-                          alt="Home Ownership Community"
-                          className="w-full h-full object-contain bg-gray-50"
-                        />
-                      )}
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">{post.category}</span>
-                        <span className="text-gray-400 text-sm">{post.date}</span>
-                      </div>
-                      <h3 className="text-xl font-bold text-black mb-3">{post.title}</h3>
-                      <p className="text-gray-600 text-sm mb-4 leading-relaxed">{post.excerpt}</p>
-                      <span className="text-red-700 font-semibold text-sm inline-flex items-center gap-1">
-                        Read Article
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                        </svg>
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              {/* Load More Button */}
-              {hasMore && (
-                <div className="text-center mt-12">
-                  <button
-                    onClick={loadMore}
-                    disabled={loadingMore}
-                    className="inline-flex items-center justify-center px-8 py-4 border-2 border-black text-black font-semibold rounded hover:bg-black hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Loading...
-                      </>
-                    ) : (
-                      'Show More'
-                    )}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+          <BlogList />
         </div>
       </section>
 

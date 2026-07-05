@@ -1,16 +1,60 @@
+import type { Metadata } from 'next'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { getSettings } from '@/lib/settings'
 import { getPodcastEpisodes } from '@/lib/settings'
+import { SITE_URL, FOUNDER } from '@/lib/site-config'
 
 export const revalidate = 10
 
-export async function generateMetadata() {
+export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings()
+  const description =
+    settings.podcast_meta_description ||
+    'The Power of Ownership Podcast with Brandon Bee Dixon — real estate investing, homeownership strategies, and wealth-building conversations.'
   return {
-    title: settings.podcast_meta_title || 'Podcast | The Homeownership Community',
-    description: settings.podcast_meta_description || 'Listen to the Power of Ownership Podcast by Brandon Bee Dixon.',
+    title: settings.podcast_meta_title || 'Power of Ownership Podcast',
+    description: description.slice(0, 160),
+    alternates: {
+      canonical: `${SITE_URL}/podcast`,
+    },
+    openGraph: {
+      title: 'Power of Ownership Podcast | Houston Real Estate | HOC',
+      description: description.slice(0, 160),
+      url: `${SITE_URL}/podcast`,
+      type: 'website',
+    },
   }
+}
+
+/**
+ * PodcastSeries JSON-LD so AI engines + podcast directories recognize
+ * the show as an entity (audit Tier 1 #7). Apple Podcasts is the
+ * canonical webFeed per Apple Podcast Connect. youtube.com is the
+ * video surface. future: when /podcast/[slug] pages exist, each
+ * episode will get its own PodcastEpisode schema.
+ */
+const podcastSeriesSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'PodcastSeries',
+  name: 'Power of Ownership',
+  url: `${SITE_URL}/podcast`,
+  description:
+    'Real estate investing, homeownership strategies, and wealth-building conversations with Brandon Bee Dixon.',
+  inLanguage: 'en',
+  webFeed: 'https://podcasts.apple.com/us/podcast/the-power-of-ownership/id1367210212',
+  author: {
+    '@type': 'Person',
+    name: FOUNDER.name,
+    url: `${SITE_URL}/about`,
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'The Homeownership Community',
+    url: SITE_URL,
+  },
+  // image will be added once a podcast cover art asset exists at
+  // /podcast/cover.jpg (recommended 1400x1400 to 3000x3000).
 }
 
 export default async function PodcastPage() {
@@ -26,6 +70,12 @@ export default async function PodcastPage() {
   return (
     <div className="min-h-screen bg-white">
       <Navigation />
+
+      {/* PodcastSeries JSON-LD (audit Tier 1 #7) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(podcastSeriesSchema) }}
+      />
 
       {/* Hero */}
       <section className="pt-32 pb-16 bg-gradient-to-b from-gray-50 to-white">

@@ -1,13 +1,27 @@
+import type { Metadata } from 'next'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { getSettings } from '@/lib/settings'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { SITE_URL } from '@/lib/site-config'
 
-export async function generateMetadata() {
+export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings()
+  const description =
+    settings.meta_description ||
+    'Meet Brandon Bee Dixon — Houston mortgage broker (NMLS #1541210), Texas Realtor, author, and host of the Power of Ownership Podcast.'
   return {
-    title: settings.meta_title || 'About Brandon Bee Dixon | The Homeownership Community',
-    description: settings.meta_description || 'Meet Brandon Bee Dixon - Mortgage Broker, Texas Realtor, author, and host of the Power of Ownership Podcast. With 30+ years of experience, Brandon helps families achieve homeownership and real estate investment goals.',
+    title: settings.meta_title || 'About Brandon Bee Dixon',
+    description: description.slice(0, 160),
+    alternates: {
+      canonical: `${SITE_URL}/about`,
+    },
+    openGraph: {
+      title: settings.meta_title || 'About Brandon Bee Dixon | The Homeownership Community',
+      description: description.slice(0, 160),
+      url: `${SITE_URL}/about`,
+      type: 'profile',
+    },
   }
 }
 
@@ -50,7 +64,7 @@ export default async function AboutPage() {
           {/* Profile Flyer */}
           <div className="max-w-2xl mx-auto mb-16">
             <img
-              src="/brandon-flyer.png"
+              src="/brandon-flyer.webp"
               alt="Brandon Bee Dixon - Profile"
               className="w-full rounded-xl shadow-2xl"
             />
