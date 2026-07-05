@@ -70,6 +70,14 @@ export async function POST(request: Request) {
               type: 'application/pdf',
             })
           }
+          if (existsSync(join(guidesDir, 'Reverse Mortgage Guide BrandonBeeDixon.pdf'))) {
+            const buf = readFileSync(join(guidesDir, 'Reverse Mortgage Guide BrandonBeeDixon.pdf'))
+            attachments.push({
+              filename: 'Reverse-Mortgage-Guide-BrandonBeeDixon.pdf',
+              content: buf.toString('base64'),
+              type: 'application/pdf',
+            })
+          }
         } catch {
           // Continue without attachments.
         }
@@ -86,6 +94,7 @@ export async function POST(request: Request) {
                 <ul>
                   <li><strong>HOC Real Estate Investment FAQ</strong></li>
                   <li><strong>REI FAQ by Brandon Bee Dixon</strong></li>
+                  <li><strong>Reverse Mortgage Guide</strong></li>
                 </ul>
                 <p>You can also download these guides anytime from our Resources page.</p>
                 <p>Best regards,<br/>Brandon Bee Dixon</p>

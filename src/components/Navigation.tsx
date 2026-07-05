@@ -9,19 +9,12 @@ export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [showPodcast, setShowPodcast] = useState(false)
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-  })
   const [theme, setTheme] = useState({
     primary_color: '#A61C30',
     header_bg: '#FFFFFF',
     header_text: '#000000',
   })
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState('')
+  const [embedLoaded, setEmbedLoaded] = useState(false)
 
   useEffect(() => {
     fetch('/api/settings', { cache: 'no-store' })
@@ -56,43 +49,31 @@ export default function Navigation() {
       .catch(() => {})
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-    setSubmitError('')
-    try {
-      const res = await fetch('/api/subscribers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          source: 'nav_modal',
-        }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Something went wrong')
-      }
-      setShowModal(false)
-      setFormData({ firstName: '', lastName: '', email: '', phone: '' })
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    if (!showModal || embedLoaded) return
+
+    if (document.getElementById('goatgenie-form-embed-script')) {
+      setEmbedLoaded(true)
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://links.goatgenie.com/js/form_embed.js'
+    script.async = true
+    script.defer = true
+    script.id = 'goatgenie-form-embed-script'
+    script.onload = () => setEmbedLoaded(true)
+    document.body.appendChild(script)
+  }, [showModal, embedLoaded])
+
   const modal = showModal ? (
     <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-8 sm:pt-[10vh] overflow-y-auto">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-      <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl my-auto">
+      <div className="relative bg-white rounded-2xl p-4 sm:p-6 max-w-3xl w-full shadow-2xl my-auto">
         <button
           onClick={() => setShowModal(false)}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
@@ -102,68 +83,41 @@ export default function Navigation() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <h3 className="text-2xl font-bold text-black mb-2">Join the Community</h3>
-        <p className="text-gray-600 mb-6">Fill out the form below and we&apos;ll be in touch soon.</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">First Name</label>
-              <input
-                type="text"
-                required
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
-                placeholder="John"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">Last Name</label>
-              <input
-                type="text"
-                required
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
-                placeholder="Doe"
-              />
-            </div>
+        <div className="pt-8">
+          <div className="mb-5">
+            <h3 className="text-2xl font-bold text-black mb-2">Join the Community</h3>
+            <p className="text-gray-600">
+              Fill out the GoatGenie form below and Brandon&apos;s team will receive your info directly.
+            </p>
           </div>
-          <div>
-            <label className="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
-              placeholder="john@example.com"
+
+          <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 min-h-[560px]">
+            <iframe
+              src="https://links.goatgenie.com/widget/form/sXfFG5m4S6zWGQAqLMrx"
+              style={{ width: '100%', height: '100%', border: 'none', borderRadius: '8px', minHeight: '560px' }}
+              id="inline-sXfFG5m4S6zWGQAqLMrx"
+              data-layout="{'id':'INLINE'}"
+              data-trigger-type="alwaysShow"
+              data-trigger-value=""
+              data-activation-type="alwaysActivated"
+              data-activation-value=""
+              data-deactivation-type="neverDeactivate"
+              data-deactivation-value=""
+              data-form-name="Join the Community"
+              data-height="523"
+              data-layout-iframe-id="inline-sXfFG5m4S6zWGQAqLMrx"
+              data-form-id="sXfFG5m4S6zWGQAqLMrx"
+              title="Join the Community"
+              className="w-full"
             />
           </div>
-          <div>
-            <label className="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
-              placeholder="(555) 123-4567"
-            />
-          </div>
-          {submitError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-              {submitError}
+
+          {!embedLoaded && (
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              Loading the GoatGenie form...
             </div>
           )}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full text-white font-semibold py-4 rounded-lg transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: theme.primary_color }}
-          >
-            {submitting ? 'Submitting...' : 'Submit'}
-          </button>
-        </form>
+        </div>
       </div>
     </div>
   ) : null

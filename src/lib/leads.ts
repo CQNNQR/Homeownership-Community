@@ -116,14 +116,42 @@ export async function createLead(input: CreateLeadInput): Promise<CreateLeadResu
   // Enqueue delivery job. Idempotency: when the same key is enqueued
   // twice (e.g. user double-clicks "Subscribe"), the unique constraint
   // collapses it into a single job.
+  //
+  // The Zapier payload always carries human-readable Source/Source
+  // Detail labels plus a `tags` array. The HOC plan calls for these
+  // to be visible inside GoatGenie (e.g. "Source: Website",
+  // "Source Detail: Homepage Join Modal") so Brandon can tell exactly
+  // where a lead came from. Callers can supply finer-grained values
+  // via input.extra; defaults are used when they don't.
+  const callerExtra = input.extra || {}
+  const sourceDetail =
+    (typeof callerExtra.source_detail === 'string' && callerExtra.source_detail.trim()) ||
+    null
+  const sourceTags = [
+    `Source: ${source}`,
+    ...(sourceDetail ? [`Source Detail: ${sourceDetail}`] : []),
+  ]
+  // Caller-provided `tags` are merged on top of our default labels so
+  // they can add their own categorization without losing the source.
+  const mergedTags = Array.isArray(callerExtra.tags)
+    ? Array.from(new Set([...sourceTags, ...(callerExtra.tags as string[])]))
+    : sourceTags
   const payload = {
     email,
     first_name: firstName,
     last_name: lastName,
     phone,
     source,
+    source_detail: sourceDetail,
+    // Flat, Zapier-friendly label fields for mappings that don't read
+    // the tags array directly.
+    Source: source,
+    'Source Detail': sourceDetail,
     created_at: new Date().toISOString(),
-    ...(input.extra || {}),
+    ...callerExtra,
+    // tags is intentionally last so the merged result (caller's tags
+    // plus the Source/Source Detail labels) always wins.
+    tags: mergedTags,
   }
   const { data: job, error: jobErr } = await supabase
     .from('lead_delivery_jobs')

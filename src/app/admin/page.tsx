@@ -902,9 +902,16 @@ function BlogManager() {
     try {
       const response = await fetch('/api/blog-visibility')
       const data = await response.json()
-      setPosts(data || [])
+      // API may return either a bare array or an { data: [...] } envelope
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.data)
+          ? data.data
+          : []
+      setPosts(list)
     } catch (err) {
       console.error('Error fetching posts:', err)
+      setPosts([])
     }
     setLoading(false)
   }
@@ -914,17 +921,31 @@ function BlogManager() {
       const response = await fetch('/api/blog-posts?all=true')
       const data = await response.json()
       if (!response.ok) {
-        setLocalError(data?.error || 'Failed to load posts')
+        // API may return either { error: "..." } or { error: { message: "..." } }
+        const msg = (typeof data?.error === 'string' ? data.error : null)
+          || data?.error?.message
+          || 'Failed to load posts'
+        setLocalError(msg)
         setLocalPosts([])
-      } else {
-        setLocalError('')
-        setLocalPosts(data || [])
+        return
       }
+      // API may return a bare array or a { data: [...] } envelope —
+      // mirror the defensive handling used by fetchPosts() above so
+      // both shapes work without crashing the render loop on
+      // `localPosts.filter(...)`.
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.data)
+          ? data.data
+          : []
+      setLocalError('')
+      setLocalPosts(list)
     } catch (err: any) {
       setLocalError(err?.message || 'Failed to load posts')
       setLocalPosts([])
+    } finally {
+      setLocalLoading(false)
     }
-    setLocalLoading(false)
   }
 
   const syncPosts = async () => {
@@ -2146,9 +2167,27 @@ function MediaLibrary() {
     fetchMedia()
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    alert('URL copied to clipboard!')
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        // Fallback for browsers/contexts without async clipboard access
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'absolute'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      alert('URL copied to clipboard!')
+    } catch (err) {
+      console.warn('Clipboard write failed:', err)
+      alert('Could not copy to clipboard. Please copy manually: ' + text)
+    }
   }
 
   if (loading) return <div className="text-center py-8">Loading...</div>
