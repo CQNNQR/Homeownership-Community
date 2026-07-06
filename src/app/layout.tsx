@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import { TrackingBeacon } from '@/components/TrackingBeacon'
 import './globals.css'
 import {
   SITE_URL,
@@ -210,6 +211,7 @@ export default function RootLayout({
         />
 
         <Analytics />
+        <TrackingBeacon />
       </body>
     </html>
   )

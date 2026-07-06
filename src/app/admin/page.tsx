@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
+import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard'
 
 export default function SiteEditor() {
   const [user, setUser] = useState<{ email: string | null } | null>(null)
@@ -275,15 +276,15 @@ export default function SiteEditor() {
             Theme
           </button>
           <button
-            onClick={() => setActiveSection('health')}
+            onClick={() => setActiveSection('analytics')}
             className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-              activeSection === 'health'
+              activeSection === 'analytics'
                 ? 'border-red-700 text-red-700'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
-            data-testid="tab-health"
+            data-testid="tab-analytics"
           >
-            Backend Health
+            Analytics
           </button>
         </div>
       </nav>
@@ -668,9 +669,9 @@ export default function SiteEditor() {
           <ThemeEditor />
         )}
 
-        {/* Backend Health Section */}
-        {activeSection === 'health' && (
-          <BackendHealth />
+        {/* Analytics Section */}
+        {activeSection === 'analytics' && (
+          <AnalyticsDashboard />
         )}
       </main>
     </div>

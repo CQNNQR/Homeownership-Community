@@ -1,15 +1,29 @@
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { getPostBySlug as getPostFromWordPress, getPosts as getPostsFromWordPress } from '@/lib/wordpress'
 import { normalizePost, stripHtml } from '@/lib/utils'
+import { SITE_URL, OG_IMAGE_DEFAULT, proxyWpImage, FOUNDER } from '@/lib/site-config'
 
 // Revalidate every 10 seconds to keep blog fresh
 export const revalidate = 10
 
 interface Props {
   params: Promise<{ slug: string }>
+}
+
+/**
+ * Cap a string at `max` chars without splitting mid-word.
+ * Used to keep blog-post titles + meta descriptions inside SERP pixel budgets.
+ */
+function truncate(text: string, max: number): string {
+  if (!text) return text
+  if (text.length <= max) return text
+  const sliced = text.slice(0, max).trimEnd()
+  const lastSpace = sliced.lastIndexOf(' ')
+  return (lastSpace > max * 0.6 ? sliced.slice(0, lastSpace) : sliced) + '…'
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -22,15 +36,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     const normalizedPost = normalizePost(post)
+    const title = truncate(normalizedPost.title, 60)
+    const description = truncate(normalizedPost.excerpt || '', 155)
+    const postImage = proxyWpImage(normalizedPost.image) || OG_IMAGE_DEFAULT
+    const postUrl = `${SITE_URL}/blog/${post.slug}`
 
     return {
-      title: `${normalizedPost.title} | The Home Ownership Community`,
-      description: normalizedPost.excerpt,
+      title,
+      description,
+      alternates: {
+        canonical: postUrl,
+      },
       openGraph: {
-        title: normalizedPost.title,
-        description: normalizedPost.excerpt,
-        images: normalizedPost.image ? [{ url: normalizedPost.image }] : [],
+        title,
+        description,
+        url: postUrl,
+        siteName: 'The Homeownership Community',
+        images: [{ url: postImage, alt: normalizedPost.imageAlt || title }],
         type: 'article',
+        publishedTime: post.date,
+        modifiedTime: post.modified || post.date,
+        authors: [FOUNDER.name],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [postImage],
       },
     }
   } catch {
@@ -44,75 +76,89 @@ function generateFAQs(title: string, content: string) {
 
   const faqs: { question: string; answer: string }[] = []
 
-  // Generate relevant FAQs based on keywords in the content
   if (text.includes('mortgage') || text.includes('loan')) {
     faqs.push({
       question: 'How do I get approved for a mortgage?',
-      answer: 'Getting approved for a mortgage typically involves checking your credit score, saving for a down payment, verifying your income, and working with a lender. Contact a mortgage professional for personalized guidance.',
+      answer:
+        'Getting approved for a mortgage typically involves checking your credit score, saving for a down payment, verifying your income, and working with a lender. Contact a mortgage professional for personalized guidance.',
     })
   }
 
   if (text.includes('investing') || text.includes('rental')) {
     faqs.push({
       question: 'Is real estate a good investment?',
-      answer: 'Real estate can be an excellent investment for building wealth through rental income, property appreciation, and tax benefits. Research local markets and work with experienced professionals.',
+      answer:
+        'Real estate can be an excellent investment for building wealth through rental income, property appreciation, and tax benefits. Research local markets and work with experienced professionals.',
     })
   }
 
   if (text.includes('landlord') || text.includes('tenant')) {
     faqs.push({
       question: 'What are the responsibilities of a landlord?',
-      answer: 'Landlord responsibilities include maintaining the property, handling repairs, screening tenants, collecting rent, and complying with local landlord-tenant laws.',
+      answer:
+        'Landlord responsibilities include maintaining the property, handling repairs, screening tenants, collecting rent, and complying with local landlord-tenant laws.',
     })
   }
 
   if (text.includes('buy') || text.includes('purchase')) {
     faqs.push({
       question: 'What should I know before buying my first property?',
-      answer: 'Before buying, understand your budget, get pre-approved for financing, research neighborhoods, factor in hidden costs (taxes, insurance, maintenance), and work with a real estate professional.',
+      answer:
+        'Before buying, understand your budget, get pre-approved for financing, research neighborhoods, factor in hidden costs (taxes, insurance, maintenance), and work with a real estate professional.',
     })
   }
 
-  // Default FAQs if no specific keywords found
   if (faqs.length === 0) {
     faqs.push({
       question: 'How can I learn more about real estate investing?',
-      answer: 'Join The Home Ownership Community for expert insights on real estate investing, property ownership, and building generational wealth.',
+      answer:
+        'Join The Home Ownership Community for expert insights on real estate investing, property ownership, and building generational wealth.',
     })
     faqs.push({
       question: 'What is "We Create Owners"?',
-      answer: '"We Create Owners" is the mission of The Home Ownership Community - empowering individuals to become homeowners and real estate investors.',
+      answer:
+        '"We Create Owners" is the mission of The Home Ownership Community — empowering individuals to become homeowners and real estate investors.',
     })
   }
 
   return faqs
 }
 
-// Generate JSON-LD schema for the post
+/**
+ * Article JSON-LD for a single blog post.
+ *
+ * Audit fix: this used to hardcode `homeownership-community.vercel.app`
+ * (the previous Vercel preview deploy). Now it uses SITE_URL (production)
+ * for every URL field, plus proxyWpImage() to point featured images at
+ * the same-origin /wp-image proxy path so social previews can fetch them
+ * without mixed-content warnings.
+ */
 function generateArticleSchema(post: any, normalizedPost: any) {
-  const siteUrl = 'https://homeownership-community.vercel.app'
-  const articleUrl = `${siteUrl}/blog/${post.slug}`
+  const articleUrl = `${SITE_URL}/blog/${post.slug}`
+  const imageUrl = proxyWpImage(normalizedPost.image) || `${SITE_URL}/LOGO/15002.png`
 
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: normalizedPost.title,
     description: normalizedPost.excerpt,
-    image: normalizedPost.image || `${siteUrl}/LOGO/15002.png`,
+    image: imageUrl,
     datePublished: post.date,
     dateModified: post.modified || post.date,
     author: {
       '@type': 'Person',
-      name: 'Brandon Bee Dixon',
-      description: 'Real estate investor and founder of The Home Ownership Community',
-      url: siteUrl,
+      name: FOUNDER.name,
+      description: FOUNDER.jobTitle,
+      url: SITE_URL,
+      sameAs: FOUNDER.sameAs.slice(0, 4),
     },
     publisher: {
       '@type': 'Organization',
-      name: 'The Home Ownership Community',
+      name: 'The Homeownership Community',
+      url: SITE_URL,
       logo: {
         '@type': 'ImageObject',
-        url: `${siteUrl}/LOGO/15002.png`,
+        url: `${SITE_URL}/LOGO/15002.png`,
       },
     },
     mainEntityOfPage: {
@@ -125,29 +171,17 @@ function generateArticleSchema(post: any, normalizedPost: any) {
 }
 
 function generateBreadcrumbSchema(post: any) {
-  const siteUrl = 'https://homeownership-community.vercel.app'
-
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: siteUrl,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Blog',
-        item: `${siteUrl}/blog`,
-      },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
       {
         '@type': 'ListItem',
         position: 3,
-        name: post.title,
-        item: `${siteUrl}/blog/${post.slug}`,
+        name: post.title?.rendered ? stripHtml(post.title.rendered) : 'Post',
+        item: `${SITE_URL}/blog/${post.slug}`,
       },
     ],
   }
@@ -188,25 +222,16 @@ export default async function BlogPostPage({ params }: Props) {
     console.error('Error fetching post:', err)
   }
 
+  // Audit fix: this used to return a JSX "Article Not Found" page with HTTP
+  // 200 (soft-404), letting Google index random slugs. Now we trigger a
+  // proper 404 via Next's notFound(), which renders src/app/not-found.tsx.
   if (!post) {
-    return (
-      <div className="min-h-screen bg-white">
-        <Navigation />
-        <section className="pt-32 pb-16">
-          <div className="max-w-7xl mx-auto px-4 text-center">
-            <h1 className="text-3xl font-bold text-black mb-4">Article Not Found</h1>
-            <Link href="/blog" className="text-red-700 hover:text-red-800">
-              ← Back to Blog
-            </Link>
-          </div>
-        </section>
-        <Footer />
-      </div>
-    )
+    notFound()
   }
 
   const normalizedPost = normalizePost(post)
   const faqs = generateFAQs(normalizedPost.title, post.content?.rendered || '')
+  const heroImage = proxyWpImage(normalizedPost.image)
 
   const articleSchema = generateArticleSchema(post, normalizedPost)
   const breadcrumbSchema = generateBreadcrumbSchema(post)
@@ -219,7 +244,9 @@ export default async function BlogPostPage({ params }: Props) {
       {/* JSON-LD Schema */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify([articleSchema, breadcrumbSchema, faqSchema]) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([articleSchema, breadcrumbSchema, faqSchema]),
+        }}
       />
 
       {/* Article Hero */}
@@ -237,14 +264,21 @@ export default async function BlogPostPage({ params }: Props) {
             <span className="text-gray-400 text-sm">• {normalizedPost.readingTime}</span>
           </div>
           <h1 className="text-4xl font-bold text-black mb-6">{normalizedPost.title}</h1>
+          {/* YMYL disclaimer — Tier 1 #10. Mortgage/credit content is
+              designated "Your Money or Your Life" by Google quality raters
+              and requires an explicit non-advice disclaimer. */}
+          <p className="text-xs text-gray-500">
+            *Not financial advice. NMLS #{FOUNDER.nmls}. Always consult a licensed mortgage professional before making financial decisions.
+          </p>
         </div>
       </section>
 
       {/* Featured Image */}
-      {normalizedPost.image && (
+      {heroImage && (
         <div className="max-w-4xl mx-auto px-4 -mt-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={normalizedPost.image}
+            src={heroImage}
             alt={normalizedPost.imageAlt || 'Home Ownership Community'}
             className="w-full h-96 object-cover rounded-xl shadow-lg"
           />
@@ -283,7 +317,7 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
             <div>
               <p className="font-bold text-black">Brandon Bee Dixon</p>
-              <p className="text-gray-600 text-sm">Founder of The Home Ownership Community</p>
+              <p className="text-gray-600 text-sm">Founder of The Homeownership Community • NMLS #{FOUNDER.nmls}</p>
             </div>
           </div>
         </div>
@@ -303,12 +337,14 @@ export default async function BlogPostPage({ params }: Props) {
                 >
                   <div className="h-40 bg-gray-200 relative">
                     {relatedPost.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={relatedPost.image}
                         alt={relatedPost.imageAlt}
                         className="w-full h-full object-cover"
                       />
                     ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src="/LOGO/15002.png"
                         alt="Home Ownership Community"

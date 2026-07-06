@@ -1,93 +1,31 @@
-'use client'
-
+import type { Metadata } from 'next'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { useState, useEffect } from 'react'
+import ResourcesGuides from '@/components/ResourcesGuides'
+import { SITE_URL } from '@/lib/site-config'
 
-const freeGuides = [
-  {
-    title: 'HOC Real Estate Investment FAQ',
-    description: 'The Homeownership Community guide to real estate investment frequently asked questions.',
-    category: 'Free with Subscription',
-    file: '/guides/hoc-rei-faq.pdf',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
+export const metadata: Metadata = {
+  title: 'Free Real Estate Investment Guides & Resources',
+  description:
+    'Free downloadable guides on real estate investing, reverse mortgages, and homeownership from Houston mortgage broker Brandon Bee Dixon (NMLS #1541210).',
+  alternates: {
+    canonical: `${SITE_URL}/resources`,
   },
-  {
-    title: 'Real Estate Investment FAQ',
-    description: 'Frequently asked questions about real estate investing, property ownership, and building wealth through real estate.',
-    category: 'Free with Subscription',
-    file: '/guides/REI FAQ BrandonBeeDixon.pdf',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+  openGraph: {
+    title: 'Free Real Estate Investment Guides | The Homeownership Community',
+    description:
+      'Free downloadable guides on real estate investing, reverse mortgages, and homeownership from Houston mortgage broker Brandon Bee Dixon.',
+    url: `${SITE_URL}/resources`,
+    type: 'website',
   },
-  {
-    title: 'Reverse Mortgage Guide',
-    description: 'Comprehensive guide to reverse mortgages — how they work, the pros and cons, and whether they might be right for you. Get the complete breakdown from a mortgage expert.',
-    category: 'Free with Subscription',
-    file: '/guides/Reverse Mortgage Guide BrandonBeeDixon.pdf',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-  },
-]
+}
 
 export default function ResourcesPage() {
-  const [showSubscribeModal, setShowSubscribeModal] = useState(false)
-  const [subscribeEmail, setSubscribeEmail] = useState('')
-  const [subscribeLoading, setSubscribeLoading] = useState(false)
-  const [subscribeError, setSubscribeError] = useState('')
-  const [isSubscribed, setIsSubscribed] = useState(false)
-
-  useEffect(() => {
-    const subscribed = localStorage.getItem('hoc_subscribed')
-    if (subscribed) {
-      setIsSubscribed(true)
-    }
-  }, [])
-
-  const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubscribeLoading(true)
-    setSubscribeError('')
-
-    try {
-      const response = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: subscribeEmail }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        localStorage.setItem('hoc_subscribed', 'true')
-        setIsSubscribed(true)
-        setShowSubscribeModal(false)
-        setSubscribeEmail('')
-      } else {
-        setSubscribeError(data.error?.error?.message || data.error || 'Failed to subscribe. Please try again.')
-      }
-    } catch (err) {
-      setSubscribeError('Something went wrong. Please try again.')
-    } finally {
-      setSubscribeLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <Navigation />
 
-      {/* hero */}
+      {/* Hero */}
       <section className="pt-32 pb-16 bg-[#F9F9F9]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-bold text-black mb-4">Homeownership Resources & Financial Literacy</h1>
@@ -97,106 +35,14 @@ export default function ResourcesPage() {
         </div>
       </section>
 
-      {/* Free Guides Section - Requires Subscription */}
+      {/* Free Guides Section - Requires Subscription (client island) */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-black mb-2">Free Guides</h2>
           <p className="text-gray-600 mb-8">Subscribe to get instant access to these free guides.</p>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {freeGuides.map((guide, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow"
-              >
-                <div className="p-6">
-                  <div className="bg-red-700/10 w-16 h-16 rounded-xl flex items-center justify-center mb-4">
-                    <div className="text-red-700">
-                      {guide.icon}
-                    </div>
-                  </div>
-                  <span className="bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">
-                    {guide.category}
-                  </span>
-                  <h3 className="text-xl font-bold text-black mt-4 mb-2">{guide.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4">{guide.description}</p>
-                </div>
-                <div className="px-6 pb-6">
-                  {isSubscribed ? (
-                    <a
-                      href={guide.file}
-                      download
-                      className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded transition-colors flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Download Free Guide
-                    </a>
-                  ) : (
-                    <button
-                      onClick={() => setShowSubscribeModal(true)}
-                      className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-3 rounded transition-colors flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      Subscribe for Free Access
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <ResourcesGuides />
         </div>
       </section>
-
-      {/* Premium Guide Section - REMOVED: Reverse Mortgage guide is now
-          in the freeGuides array above and uses the same email-signup
-          gate as the rest. The Purchase/$99 UI is gone so visitors get
-          the same flow as the other free guides. */}
-
-      {/* Subscribe Modal */}
-      {showSubscribeModal && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-8 sm:pt-[10vh] overflow-y-auto">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowSubscribeModal(false)}
-          />
-          <div className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl my-auto">
-            <button
-              onClick={() => setShowSubscribeModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Close"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <h3 className="text-2xl font-bold text-black mb-2">Get Free Guides</h3>
-            <p className="text-gray-600 mb-4">Subscribe to get instant access to our free investment guides.</p>
-            <form onSubmit={handleSubscribe} className="space-y-4">
-              <div>
-                <label className="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={subscribeEmail}
-                  onChange={(e) => setSubscribeEmail(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-colors"
-                  placeholder="john@example.com"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-4 rounded-lg transition-colors mt-2"
-              >
-                Get Free Access
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Contact Section */}
       <section className="py-16 bg-[#F9F9F9]">
